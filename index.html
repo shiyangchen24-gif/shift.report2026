@@ -166,6 +166,13 @@
     color: var(--text);
   }
   .btn-secondary:hover{ border-color: var(--accent); color: var(--accent); }
+  .btn-danger{
+    background: transparent;
+    border: 1px solid #F3D0C7;
+    color: #B3261E;
+    margin-right: 8px;
+  }
+  .btn-danger:hover{ background: #FDEBE8; }
   .btn-ghost{
     background: transparent;
     color: var(--text-soft);
@@ -349,6 +356,7 @@
     <div class="table-toolbar">
       <span class="status"><span class="sync-dot" id="ab-sync-dot"></span><span id="ab-sync-text">已同步</span></span>
       <div>
+        <button class="btn btn-danger" onclick="clearAll('abnormal')">🗑 刪除全部</button>
         <button class="btn btn-secondary" onclick="printPanel('abnormal')">🖨 列印</button>
       </div>
     </div>
@@ -394,6 +402,7 @@
     <div class="table-toolbar">
       <span class="status"><span class="sync-dot" id="ho-sync-dot"></span><span id="ho-sync-text">已同步</span></span>
       <div>
+        <button class="btn btn-danger" onclick="clearAll('handover')">🗑 刪除全部</button>
         <button class="btn btn-secondary" onclick="printPanel('handover')">🖨 列印</button>
       </div>
     </div>
@@ -598,6 +607,21 @@ async function refreshHandover(){
 }
 
 /* ---------------- 共用 ---------------- */
+
+async function clearAll(type){
+  var label = type === 'abnormal' ? '異常表' : '交接表';
+  if (!confirm(`確定要刪除「${label}」的所有資料嗎？此動作無法復原。`)) return;
+  if (!confirm(`再次確認：這會清空全部 ${label} 資料，確定要繼續嗎？`)) return;
+  try{
+    setSyncState(type, 'loading');
+    await apiPost({ action: 'clearAll', type: type });
+    showToast(`已刪除 ${label} 全部資料`);
+    if (type === 'abnormal') await refreshAbnormal(); else await refreshHandover();
+  }catch(err){
+    setSyncState(type, 'error');
+    showToast('刪除失敗：' + err.message);
+  }
+}
 
 function chipClass(status){
   switch (status){
