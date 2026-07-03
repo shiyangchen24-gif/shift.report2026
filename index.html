@@ -4,18 +4,35 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>異常表與交接表</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg: #F6F6F4;
+    --bg: #F6F6F8;
     --surface: #FFFFFF;
-    --border: #E3E1DA;
-    --text: #22262B;
-    --text-soft: #6B7280;
-    --abnormal: #B3390A;
-    --abnormal-soft: #FBEAE2;
-    --handover: #0F6E6A;
-    --handover-soft: #E4F2F0;
-    --shadow: 0 1px 2px rgba(20,20,20,0.04), 0 1px 8px rgba(20,20,20,0.04);
+    --surface-2: #EFEFF2;
+    --border: #E3E3E8;
+    --border-strong: #D2D2D9;
+    --text: #16161A;
+    --text-soft: #6D6D78;
+    --text-faint: #A1A1AA;
+
+    --abnormal: #E1123F;
+    --abnormal-soft: #FDECF0;
+    --abnormal-line: #F7C6D2;
+
+    --handover: #2952E3;
+    --handover-soft: #EAEFFD;
+    --handover-line: #C4D0FA;
+
+    --accent: var(--abnormal);
+    --accent-soft: var(--abnormal-soft);
+    --accent-line: var(--abnormal-line);
+
+    --radius: 10px;
+    --shadow-sm: 0 1px 2px rgba(15,15,20,0.05);
+    --shadow-md: 0 4px 16px rgba(15,15,20,0.06), 0 1px 3px rgba(15,15,20,0.04);
   }
 
   * { box-sizing: border-box; }
@@ -24,125 +41,166 @@
     margin:0;
     background: var(--bg);
     color: var(--text);
-    font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-family: "Inter", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     -webkit-font-smoothing: antialiased;
+    letter-spacing: -0.005em;
   }
 
+  .mono{ font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace; }
+
   header{
-    background: var(--surface);
+    background: rgba(246,246,248,0.85);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     border-bottom: 1px solid var(--border);
-    padding: 18px 24px 0 24px;
+    padding: 16px 28px;
     position: sticky;
     top: 0;
     z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
   }
 
-  h1{
-    font-size: 18px;
+  .brand{
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .brand .mark{
+    width: 26px; height: 26px;
+    border-radius: 7px;
+    background: linear-gradient(135deg, var(--abnormal), var(--handover));
+    flex-shrink: 0;
+  }
+
+  .brand h1{
+    font-size: 15.5px;
     font-weight: 700;
-    letter-spacing: 0.02em;
-    margin: 0 0 14px 0;
+    letter-spacing: -0.01em;
+    margin: 0;
+    line-height: 1.2;
+  }
+
+  .brand .sub{
+    font-size: 11.5px;
+    color: var(--text-faint);
+    font-weight: 500;
   }
 
   .tabs{
-    display: flex;
-    gap: 4px;
+    display: inline-flex;
+    gap: 2px;
+    background: var(--surface-2);
+    padding: 3px;
+    border-radius: 9px;
+    border: 1px solid var(--border);
   }
 
   .tab{
     appearance: none;
     border: none;
     background: transparent;
-    padding: 10px 18px;
-    font-size: 14px;
+    padding: 7px 16px;
+    font-size: 13.5px;
     font-weight: 600;
     color: var(--text-soft);
     cursor: pointer;
-    border-bottom: 3px solid transparent;
+    border-radius: 6px;
     display: flex;
     align-items: center;
-    gap: 8px;
-    transition: color .15s ease;
+    gap: 7px;
+    transition: color .15s ease, background .15s ease, box-shadow .15s ease;
   }
 
   .tab .dot{
-    width: 7px; height: 7px; border-radius: 50%;
+    width: 6px; height: 6px; border-radius: 50%;
     background: currentColor;
-    opacity: .5;
+    opacity: .55;
   }
 
-  .tab.active[data-type="abnormal"]{
-    color: var(--abnormal);
-    border-bottom-color: var(--abnormal);
+  .tab.active{
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
   }
-  .tab.active[data-type="handover"]{
-    color: var(--handover);
-    border-bottom-color: var(--handover);
-  }
+  .tab.active[data-type="abnormal"]{ color: var(--abnormal); }
+  .tab.active[data-type="handover"]{ color: var(--handover); }
+  .tab.active .dot{ opacity: 1; }
   .tab:not(.active):hover{ color: var(--text); }
 
   main{
-    max-width: 980px;
+    max-width: 1040px;
     margin: 0 auto;
-    padding: 24px;
+    padding: 28px;
   }
 
   .panel{ display: none; }
-  .panel.active{ display: block; }
+  .panel.active{ display: block; animation: fadein .18s ease; }
+  @keyframes fadein{ from{ opacity: 0; transform: translateY(2px);} to{ opacity: 1; transform: translateY(0);} }
+
+  .panel[data-type="abnormal"]{ --accent: var(--abnormal); --accent-soft: var(--abnormal-soft); --accent-line: var(--abnormal-line); }
+  .panel[data-type="handover"]{ --accent: var(--handover); --accent-soft: var(--handover-soft); --accent-line: var(--handover-line); }
 
   .card{
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 10px;
-    box-shadow: var(--shadow);
-    padding: 20px;
-    margin-bottom: 20px;
-    border-left: 4px solid var(--accent, #ccc);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    padding: 22px;
+    margin-bottom: 22px;
   }
-
-  .panel[data-type="abnormal"] .card{ --accent: var(--abnormal); }
-  .panel[data-type="handover"] .card{ --accent: var(--handover); }
 
   .card h2{
     font-size: 13px;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--text-soft);
-    margin: 0 0 16px 0;
+    color: var(--text);
+    margin: 0 0 18px 0;
     font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card h2::before{
+    content: "";
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
   }
 
   .form-grid{
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: 14px;
+    gap: 16px;
     align-items: end;
   }
 
-  .field{ display: flex; flex-direction: column; gap: 6px; }
+  .field{ display: flex; flex-direction: column; gap: 7px; }
   .field.wide{ grid-column: 1 / -1; }
 
   label{
-    font-size: 12.5px;
+    font-size: 12px;
     font-weight: 600;
     color: var(--text-soft);
   }
 
   input[type="text"], input[type="date"], select, textarea{
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-strong);
     border-radius: 7px;
-    padding: 9px 10px;
+    padding: 9px 11px;
     font-size: 14px;
     font-family: inherit;
-    background: #FCFCFB;
+    background: var(--surface);
     color: var(--text);
     outline: none;
-    transition: border-color .15s ease, background .15s ease;
+    transition: border-color .15s ease, box-shadow .15s ease;
   }
 
   input:focus, select:focus, textarea:focus{
     border-color: var(--accent);
-    background: #fff;
+    box-shadow: 0 0 0 3px var(--accent-soft);
   }
 
   textarea{ resize: vertical; min-height: 40px; }
@@ -151,103 +209,123 @@
     appearance: none;
     border: none;
     border-radius: 7px;
-    padding: 10px 18px;
-    font-size: 14px;
-    font-weight: 700;
+    padding: 9px 16px;
+    font-size: 13.5px;
+    font-weight: 600;
     cursor: pointer;
-    transition: opacity .15s ease, transform .05s ease;
+    transition: opacity .15s ease, background .15s ease, transform .05s ease, border-color .15s ease;
   }
   .btn:active{ transform: translateY(1px); }
-  .btn-primary{ background: var(--accent); color: #fff; }
-  .btn-primary:hover{ opacity: .9; }
+  .btn-primary{ background: var(--accent); color: #fff; box-shadow: var(--shadow-sm); }
+  .btn-primary:hover{ opacity: .92; }
   .btn-secondary{
-    background: transparent;
-    border: 1px solid var(--border);
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
     color: var(--text);
   }
   .btn-secondary:hover{ border-color: var(--accent); color: var(--accent); }
   .btn-danger{
     background: transparent;
-    border: 1px solid #F3D0C7;
-    color: #B3261E;
-    margin-right: 8px;
+    border: 1px solid transparent;
+    color: var(--abnormal);
+    margin-right: 4px;
   }
-  .btn-danger:hover{ background: #FDEBE8; }
+  .btn-danger:hover{ background: var(--abnormal-soft); }
   .btn-ghost{
     background: transparent;
-    color: var(--text-soft);
+    color: var(--text-faint);
     padding: 4px 8px;
     font-weight: 600;
     font-size: 13px;
+    border-radius: 5px;
   }
-  .btn-ghost:hover{ color: var(--abnormal); }
+  .btn-ghost:hover{ color: var(--abnormal); background: var(--abnormal-soft); }
 
   .table-toolbar{
     display: flex;
     align-items: center;
     justify-content: space-between;
     margin-bottom: 10px;
+    gap: 12px;
+    flex-wrap: wrap;
   }
 
   .table-toolbar .status{
     font-size: 12.5px;
-    color: var(--text-soft);
+    color: var(--text-faint);
     display: flex;
     align-items: center;
     gap: 6px;
+    font-weight: 500;
   }
 
   .sync-dot{
-    width: 7px; height: 7px; border-radius: 50%;
-    background: #22c55e;
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #16a34a;
     display: inline-block;
   }
-  .sync-dot.loading{ background: #d1d5db; animation: pulse 1s infinite; }
+  .sync-dot.loading{ background: #d4d4d8; animation: pulse 1s infinite; }
   @keyframes pulse{ 50%{ opacity: .3; } }
+
+  .table-wrap{
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+  }
 
   table{
     width: 100%;
     border-collapse: collapse;
-    background: var(--surface);
     font-size: 13.5px;
   }
 
   th, td{
-    border: 1px solid #D8D6CF;
-    padding: 9px 10px;
+    padding: 11px 14px;
     text-align: left;
     vertical-align: top;
+    border-bottom: 1px solid var(--border);
   }
 
   th{
-    background: var(--accent-soft, #F2F2EF);
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
     font-weight: 700;
-    color: var(--text);
+    color: var(--text-faint);
     white-space: nowrap;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border-strong);
   }
 
-  .panel[data-type="abnormal"] th{ background: var(--abnormal-soft); }
-  .panel[data-type="handover"] th{ background: var(--handover-soft); }
+  tbody tr{ transition: background .1s ease; }
+  tbody tr:hover{ background: var(--surface-2); }
+  tbody tr:last-child td{ border-bottom: none; }
 
-  tbody tr:hover{ background: #FAFAF8; }
+  td.mono-cell{ font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 12.5px; color: var(--text-soft); white-space: nowrap; }
 
   .chip{
-    display: inline-block;
-    padding: 2px 9px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px 3px 8px;
     border-radius: 100px;
     font-size: 12px;
-    font-weight: 700;
+    font-weight: 600;
+    border: 1px solid transparent;
   }
-  .chip.return{ background: #FDE8E8; color: #B3261E; }
-  .chip.exchange{ background: #E7F0FE; color: #1D4ED8; }
-  .chip.reaction{ background: #FEF3C7; color: #92400E; }
-  .chip.restock{ background: #DCFCE7; color: #166534; }
+  .chip::before{ content:""; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+  .chip.return{ background: #FDECF0; color: #C11448; border-color: #F7C6D2; }
+  .chip.exchange{ background: #EAEFFD; color: #2952E3; border-color: #C4D0FA; }
+  .chip.reaction{ background: #FEF6E7; color: #B4720A; border-color: #F5DFAD; }
+  .chip.restock{ background: #EAFAF0; color: #0F8B4C; border-color: #BEEBD1; }
 
   .empty-row td{
     text-align: center;
-    color: var(--text-soft);
-    padding: 24px;
-    border: 1px solid #D8D6CF;
+    color: var(--text-faint);
+    padding: 32px;
+    border-bottom: none;
   }
 
   .col-del{ width: 36px; text-align: center; }
@@ -257,15 +335,17 @@
     bottom: 22px;
     left: 50%;
     transform: translateX(-50%) translateY(10px);
-    background: #22262B;
+    background: var(--text);
     color: #fff;
     padding: 10px 18px;
     border-radius: 8px;
     font-size: 13.5px;
+    font-weight: 500;
     opacity: 0;
     pointer-events: none;
     transition: opacity .2s ease, transform .2s ease;
     z-index: 100;
+    box-shadow: var(--shadow-md);
   }
   .toast.show{ opacity: 1; transform: translateX(-50%) translateY(0); }
 
@@ -274,11 +354,13 @@
     header, .card, .table-toolbar, .btn, .col-del{ display: none !important; }
     body{ background: #fff; }
     main{ max-width: none; padding: 0; margin: 0; }
+    .table-wrap{ border: none; box-shadow: none; border-radius: 0; }
     .print-title{ display: block !important; }
     table{ font-size: 12px; }
     th, td{ border: 1px solid #000 !important; padding: 6px 8px; }
     th{ background: #eee !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .chip{ background: transparent !important; color: #000 !important; padding: 0; font-weight: 700; }
+    .chip{ background: transparent !important; color: #000 !important; border: none !important; padding: 0; font-weight: 700; }
+    .chip::before{ display: none; }
   }
 
   .print-title{
@@ -296,12 +378,24 @@
   @media print{
     .print-meta{ display: block; }
   }
+
+  @media (max-width: 640px){
+    header{ padding: 14px 16px; }
+    main{ padding: 16px; }
+    .form-grid{ grid-template-columns: 1fr 1fr; }
+  }
 </style>
 </head>
 <body>
 
 <header>
-  <h1>異常表與交接表</h1>
+  <div class="brand">
+    <span class="mark"></span>
+    <div>
+      <h1>異常表與交接表</h1>
+      <div class="sub">多裝置即時同步</div>
+    </div>
+  </div>
   <div class="tabs">
     <button class="tab active" data-type="abnormal" onclick="switchTab('abnormal')">
       <span class="dot"></span>異常表
@@ -361,6 +455,7 @@
       </div>
     </div>
 
+    <div class="table-wrap">
     <table>
       <thead>
         <tr>
@@ -371,6 +466,7 @@
         <tr class="empty-row"><td colspan="6">尚無資料</td></tr>
       </tbody>
     </table>
+    </div>
   </section>
 
   <!-- ============ 交接表 ============ -->
@@ -407,6 +503,7 @@
       </div>
     </div>
 
+    <div class="table-wrap">
     <table>
       <thead>
         <tr>
@@ -417,6 +514,7 @@
         <tr class="empty-row"><td colspan="4">尚無資料</td></tr>
       </tbody>
     </table>
+    </div>
   </section>
 
 </main>
@@ -520,7 +618,7 @@ function renderAbnormal(rows){
   }
   tbody.innerHTML = rows.map(r => `
     <tr>
-      <td>${escapeHtml(r['日期'])}</td>
+      <td class="mono-cell">${escapeHtml(r['日期'])}</td>
       <td>${escapeHtml(r['車號'])}</td>
       <td>${escapeHtml(r['店家'])}</td>
       <td>${escapeHtml(r['原因'])}</td>
@@ -586,7 +684,7 @@ function renderHandover(rows){
   }
   tbody.innerHTML = rows.map(r => `
     <tr>
-      <td>${escapeHtml(r['日期'])}</td>
+      <td class="mono-cell">${escapeHtml(r['日期'])}</td>
       <td>${escapeHtml(r['店家'])}</td>
       <td>${escapeHtml(r['交接事項'])}</td>
       <td class="col-del"><button class="btn btn-ghost" onclick="deleteHandover('${r['id']}')">✕</button></td>
