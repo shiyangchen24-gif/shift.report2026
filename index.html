@@ -71,14 +71,20 @@
   }
 
   .brand .mark{
-    width: 26px; height: 26px;
-    border-radius: 7px;
-    background: linear-gradient(135deg, var(--abnormal), var(--handover));
+    width: 34px; height: 34px;
+    border-radius: 9px;
+    background: linear-gradient(135deg, var(--abnormal-soft), var(--handover-soft));
+    border: 1px solid var(--border);
     flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 19px;
+    line-height: 1;
   }
 
   .brand h1{
-    font-size: 15.5px;
+    font-size: 18px;
     font-weight: 700;
     letter-spacing: -0.01em;
     margin: 0;
@@ -86,7 +92,7 @@
   }
 
   .brand .sub{
-    font-size: 11.5px;
+    font-size: 13px;
     color: var(--text-faint);
     font-weight: 500;
   }
@@ -104,8 +110,8 @@
     appearance: none;
     border: none;
     background: transparent;
-    padding: 7px 16px;
-    font-size: 13.5px;
+    padding: 9px 18px;
+    font-size: 15.5px;
     font-weight: 600;
     color: var(--text-soft);
     cursor: pointer;
@@ -154,7 +160,7 @@
   }
 
   .card h2{
-    font-size: 13px;
+    font-size: 15px;
     color: var(--text);
     margin: 0 0 18px 0;
     font-weight: 700;
@@ -181,7 +187,7 @@
   .field.wide{ grid-column: 1 / -1; }
 
   label{
-    font-size: 12px;
+    font-size: 13.5px;
     font-weight: 600;
     color: var(--text-soft);
   }
@@ -189,8 +195,8 @@
   input[type="text"], input[type="date"], select, textarea{
     border: 1px solid var(--border-strong);
     border-radius: 7px;
-    padding: 9px 11px;
-    font-size: 14px;
+    padding: 11px 13px;
+    font-size: 16px;
     font-family: inherit;
     background: var(--surface);
     color: var(--text);
@@ -209,8 +215,8 @@
     appearance: none;
     border: none;
     border-radius: 7px;
-    padding: 9px 16px;
-    font-size: 13.5px;
+    padding: 11px 18px;
+    font-size: 15.5px;
     font-weight: 600;
     cursor: pointer;
     transition: opacity .15s ease, background .15s ease, transform .05s ease, border-color .15s ease;
@@ -234,9 +240,9 @@
   .btn-ghost{
     background: transparent;
     color: var(--text-faint);
-    padding: 4px 8px;
+    padding: 5px 9px;
     font-weight: 600;
-    font-size: 13px;
+    font-size: 15px;
     border-radius: 5px;
   }
   .btn-ghost:hover{ color: var(--abnormal); background: var(--abnormal-soft); }
@@ -251,7 +257,7 @@
   }
 
   .table-toolbar .status{
-    font-size: 12.5px;
+    font-size: 14px;
     color: var(--text-faint);
     display: flex;
     align-items: center;
@@ -278,18 +284,18 @@
   table{
     width: 100%;
     border-collapse: collapse;
-    font-size: 13.5px;
+    font-size: 15.5px;
   }
 
   th, td{
-    padding: 11px 14px;
+    padding: 13px 16px;
     text-align: left;
     vertical-align: top;
     border-bottom: 1px solid var(--border);
   }
 
   th{
-    font-size: 11.5px;
+    font-size: 13px;
     text-transform: uppercase;
     letter-spacing: 0.04em;
     font-weight: 700;
@@ -303,15 +309,15 @@
   tbody tr:hover{ background: var(--surface-2); }
   tbody tr:last-child td{ border-bottom: none; }
 
-  td.mono-cell{ font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 12.5px; color: var(--text-soft); white-space: nowrap; }
+  td.mono-cell{ font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 14.5px; color: var(--text-soft); white-space: nowrap; }
 
   .chip{
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    padding: 3px 10px 3px 8px;
+    padding: 4px 12px 4px 9px;
     border-radius: 100px;
-    font-size: 12px;
+    font-size: 13.5px;
     font-weight: 600;
     border: 1px solid transparent;
   }
@@ -337,9 +343,9 @@
     transform: translateX(-50%) translateY(10px);
     background: var(--text);
     color: #fff;
-    padding: 10px 18px;
+    padding: 11px 20px;
     border-radius: 8px;
-    font-size: 13.5px;
+    font-size: 15px;
     font-weight: 500;
     opacity: 0;
     pointer-events: none;
@@ -390,7 +396,7 @@
 
 <header>
   <div class="brand">
-    <span class="mark"></span>
+    <span class="mark">🐶</span>
     <div>
       <h1>異常表與交接表</h1>
       <div class="sub">多裝置即時同步</div>
