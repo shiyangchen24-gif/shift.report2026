@@ -233,6 +233,8 @@
   }
   .chip.return{ background: #FDE8E8; color: #B3261E; }
   .chip.exchange{ background: #E7F0FE; color: #1D4ED8; }
+  .chip.reaction{ background: #FEF3C7; color: #92400E; }
+  .chip.restock{ background: #DCFCE7; color: #166534; }
 
   .empty-row td{
     text-align: center;
@@ -327,6 +329,8 @@
           <select id="ab-exchangeType">
             <option value="退貨">退貨</option>
             <option value="換貨">換貨</option>
+            <option value="反應">反應</option>
+            <option value="補貨">補貨</option>
           </select>
         </div>
         <div class="field wide">
@@ -367,6 +371,10 @@
       <h2>新增交接事項</h2>
       <form id="form-handover" class="form-grid" onsubmit="return false;">
         <div class="field">
+          <label>日期</label>
+          <input type="date" id="ho-date" required>
+        </div>
+        <div class="field">
           <label>店家</label>
           <input type="text" id="ho-store" placeholder="店家名稱" required>
         </div>
@@ -393,7 +401,7 @@
     <table>
       <thead>
         <tr>
-          <th>店家</th><th>交接事項</th><th>建立時間</th><th class="col-del"></th>
+          <th>日期</th><th>店家</th><th>交接事項</th><th class="col-del"></th>
         </tr>
       </thead>
       <tbody id="ho-tbody">
@@ -507,7 +515,7 @@ function renderAbnormal(rows){
       <td>${escapeHtml(r['車號'])}</td>
       <td>${escapeHtml(r['店家'])}</td>
       <td>${escapeHtml(r['原因'])}</td>
-      <td><span class="chip ${r['退換貨'] === '換貨' ? 'exchange' : 'return'}">${escapeHtml(r['退換貨'])}</span></td>
+      <td><span class="chip ${chipClass(r['退換貨'])}">${escapeHtml(r['退換貨'])}</span></td>
       <td class="col-del"><button class="btn btn-ghost" onclick="deleteAbnormal('${r['id']}')">✕</button></td>
     </tr>
   `).join('');
@@ -529,11 +537,12 @@ async function refreshAbnormal(){
 
 async function submitHandover(){
   const data = {
+    date: document.getElementById('ho-date').value,
     store: document.getElementById('ho-store').value.trim(),
     content: document.getElementById('ho-content').value.trim()
   };
-  if (!data.store || !data.content){
-    showToast('請填寫店家與交接事項');
+  if (!data.date || !data.store){
+    showToast('請填寫日期與店家');
     return;
   }
   try{
@@ -568,9 +577,9 @@ function renderHandover(rows){
   }
   tbody.innerHTML = rows.map(r => `
     <tr>
+      <td>${escapeHtml(r['日期'])}</td>
       <td>${escapeHtml(r['店家'])}</td>
       <td>${escapeHtml(r['交接事項'])}</td>
-      <td>${escapeHtml(r['建立時間'])}</td>
       <td class="col-del"><button class="btn btn-ghost" onclick="deleteHandover('${r['id']}')">✕</button></td>
     </tr>
   `).join('');
@@ -589,6 +598,15 @@ async function refreshHandover(){
 }
 
 /* ---------------- 共用 ---------------- */
+
+function chipClass(status){
+  switch (status){
+    case '換貨': return 'exchange';
+    case '反應': return 'reaction';
+    case '補貨': return 'restock';
+    default: return 'return'; // 退貨
+  }
+}
 
 function escapeHtml(v){
   if (v === undefined || v === null) return '';
@@ -616,6 +634,7 @@ function startPolling(){
 
 // 預設今天日期
 document.getElementById('ab-date').valueAsDate = new Date();
+document.getElementById('ho-date').valueAsDate = new Date();
 
 refreshAll();
 startPolling();
