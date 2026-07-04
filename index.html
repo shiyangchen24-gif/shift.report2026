@@ -302,6 +302,47 @@
   .sync-dot.loading{ background: #d4d4d8; animation: pulse 1s infinite; }
   @keyframes pulse{ 50%{ opacity: .3; } }
 
+  #ho-print-only{ display: none; }
+
+  #ho-print-table{
+    border-collapse: collapse;
+  }
+  #ho-print-table th, #ho-print-table td{
+    border: 1px solid #000;
+    padding: 6px 8px;
+  }
+  #ho-print-title-cell{
+    font-weight: 700;
+    text-align: center;
+  }
+
+  @media print{
+    #ho-table-wrap{ display: none !important; }
+    #ho-print-only{ display: block !important; }
+    .panel[data-type="handover"] .print-title,
+    .panel[data-type="handover"] .print-meta{ display: none !important; }
+    #ho-print-table{
+      width: 100%;
+      table-layout: fixed;
+      font-family: "Microsoft JhengHei", "微軟正黑體", "PMingLiU", sans-serif;
+    }
+    #ho-print-table th, #ho-print-table td{
+      border: 1px solid #000 !important;
+      font-size: 12pt;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+    }
+    #ho-print-title-cell{
+      font-size: 14pt;
+      font-weight: 700;
+      text-align: center;
+      height: 30px;
+    }
+    #ho-print-table thead tr:nth-child(2) th:nth-child(1){ width: 15%; }
+    #ho-print-table thead tr:nth-child(2) th:nth-child(2){ width: 85%; }
+    #ho-print-table td:first-child{ width: 15%; text-align: center; }
+  }
+
   .table-wrap{
     background: var(--surface);
     border: 1px solid var(--border);
@@ -566,11 +607,11 @@
           <input type="date" id="ho-date" required>
         </div>
         <div class="field">
-          <label>店家</label>
-          <input type="text" id="ho-store" placeholder="店家名稱" required>
+          <label>客戶名稱+車號</label>
+          <input type="text" id="ho-store" placeholder="例：王小明 ABC-1234" required>
         </div>
         <div class="field wide">
-          <label>交接事項</label>
+          <label>事項</label>
           <textarea id="ho-content" placeholder="請描述交接事項"></textarea>
         </div>
         <div class="field">
@@ -591,17 +632,28 @@
       </div>
     </div>
 
-    <div class="table-wrap">
+    <div class="table-wrap" id="ho-table-wrap">
     <table>
       <thead>
         <tr>
-          <th>日期</th><th>店家</th><th>交接事項</th><th class="col-del"></th>
+          <th>日期</th><th>客戶名稱+車號</th><th>事項</th><th class="col-del"></th>
         </tr>
       </thead>
       <tbody id="ho-tbody">
         <tr class="empty-row"><td colspan="4"><span class="empty-icon">📋</span>尚無資料</td></tr>
       </tbody>
     </table>
+    </div>
+
+    <!-- 專門用於列印的交接表版面，格式對照 Excel 檔案（標題列合併置中、兩欄、細格線） -->
+    <div id="ho-print-only">
+      <table id="ho-print-table">
+        <thead>
+          <tr><th colspan="2" id="ho-print-title-cell">交接事項</th></tr>
+          <tr><th>客戶名稱+車號</th><th>事項</th></tr>
+        </thead>
+        <tbody id="ho-print-tbody"></tbody>
+      </table>
     </div>
   </section>
 
@@ -824,8 +876,8 @@ function editHandover(id){
   if (!row) return;
   editingHandoverId = id;
   document.getElementById('ho-date').value = row['日期'] || '';
-  document.getElementById('ho-store').value = row['店家'] || '';
-  document.getElementById('ho-content').value = row['交接事項'] || '';
+  document.getElementById('ho-store').value = row['客戶名稱+車號'] || '';
+  document.getElementById('ho-content').value = row['事項'] || '';
   setFormMode('handover', true);
   switchTab('handover');
   document.getElementById('form-handover').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -852,8 +904,8 @@ function renderHandover(rows){
   tbody.innerHTML = rows.map(r => `
     <tr>
       <td class="mono-cell">${escapeHtml(r['日期'])}</td>
-      <td>${escapeHtml(r['店家'])}</td>
-      <td>${escapeHtml(r['交接事項'])}</td>
+      <td>${escapeHtml(r['客戶名稱+車號'])}</td>
+      <td>${escapeHtml(r['事項'])}</td>
       <td class="col-del">
         <button class="btn btn-ghost" onclick="editHandover('${r['id']}')">✎</button>
         <button class="btn btn-ghost" onclick="deleteHandover('${r['id']}')">✕</button>
@@ -908,10 +960,44 @@ function escapeHtml(v){
     .replaceAll('"','&quot;').replaceAll("'",'&#39;');
 }
 
+function setPageOrientation(orientation){
+  let styleTag = document.getElementById('dynamic-page-style');
+  if (!styleTag){
+    styleTag = document.createElement('style');
+    styleTag.id = 'dynamic-page-style';
+    document.head.appendChild(styleTag);
+  }
+  styleTag.textContent = orientation === 'portrait'
+    ? `@page { size: A4 portrait; margin: 18mm 15mm; }`
+    : `@page { size: A4 landscape; margin: 18mm 10mm; }`;
+}
+
+function preparePrintHandover(){
+  const now = new Date();
+  document.getElementById('ho-print-title-cell').textContent = `${now.getMonth() + 1}月${now.getDate()}日交接事項`;
+  const tbody = document.getElementById('ho-print-tbody');
+  if (!handoverRows || handoverRows.length === 0){
+    tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; padding:20px;">尚無資料</td></tr>';
+    return;
+  }
+  tbody.innerHTML = handoverRows.map(r => `
+    <tr>
+      <td>${escapeHtml(r['客戶名稱+車號'])}</td>
+      <td>${escapeHtml(r['事項'])}</td>
+    </tr>
+  `).join('');
+}
+
 function printPanel(type){
-  // 印表前先更新一次列印時間戳記
-  const meta = document.getElementById(type === 'abnormal' ? 'ab-print-meta' : 'ho-print-meta');
-  meta.textContent = meta.textContent.replace(/列印時間：.*?　/, `列印時間：${new Date().toLocaleString('zh-TW')}　`);
+  if (type === 'handover'){
+    setPageOrientation('portrait');
+    preparePrintHandover();
+  } else {
+    setPageOrientation('landscape');
+    // 印表前先更新一次列印時間戳記
+    const meta = document.getElementById('ab-print-meta');
+    meta.textContent = meta.textContent.replace(/列印時間：.*?　/, `列印時間：${new Date().toLocaleString('zh-TW')}　`);
+  }
   switchTab(type);
   setTimeout(() => window.print(), 50);
 }
