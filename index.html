@@ -247,6 +247,22 @@
   }
   .btn-ghost:hover{ color: var(--abnormal); background: var(--abnormal-soft); }
 
+  .legend{
+    background: var(--accent-soft, #F4F4F6);
+    border: 1px solid var(--accent-line, var(--border));
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    font-size: 13.5px;
+    color: var(--text-soft);
+    line-height: 1.6;
+    margin-bottom: 18px;
+  }
+  .legend strong{ color: var(--text); font-weight: 700; }
+
+  @media print{
+    .legend{ border: none; background: none; padding: 0 0 10px 0; border-bottom: 1px solid #000; border-radius: 0; color: #000; font-size: 12px; }
+  }
+
   .table-toolbar{
     display: flex;
     align-items: center;
@@ -334,7 +350,7 @@
     border-bottom: none;
   }
 
-  .col-del{ width: 36px; text-align: center; }
+  .col-del{ width: 68px; text-align: right; white-space: nowrap; }
 
   .toast{
     position: fixed;
@@ -416,6 +432,10 @@
 
   <!-- ============ 異常表 ============ -->
   <section class="panel active" data-type="abnormal">
+    <div class="legend">
+      <strong>異常類別：</strong>A品質、B送貨延遲(送錯貨)、C銷貨單 手抄單錯誤、D漏單、E未依客戶需求供貨、F銷貨單未送達(未簽名)、G交接事項、H收回退貨、I出貨數量異常
+    </div>
+
     <div class="card">
       <h2>新增異常紀錄</h2>
       <form id="form-abnormal" class="form-grid" onsubmit="return false;">
@@ -431,8 +451,12 @@
           <label>店家</label>
           <input type="text" id="ab-store" placeholder="店家名稱" required>
         </div>
+        <div class="field wide">
+          <label>狀況說明</label>
+          <textarea id="ab-reason" placeholder="請描述異常狀況"></textarea>
+        </div>
         <div class="field">
-          <label>退 / 換貨</label>
+          <label>處理方式</label>
           <select id="ab-exchangeType">
             <option value="退貨">退貨</option>
             <option value="換貨">換貨</option>
@@ -440,12 +464,31 @@
             <option value="補貨">補貨</option>
           </select>
         </div>
-        <div class="field wide">
-          <label>原因</label>
-          <textarea id="ab-reason" placeholder="請描述異常原因"></textarea>
+        <div class="field">
+          <label>異常類別</label>
+          <select id="ab-category">
+            <option value="A 品質">A 品質</option>
+            <option value="B 送貨延遲(送錯貨)">B 送貨延遲(送錯貨)</option>
+            <option value="C 銷貨單 手抄單錯誤">C 銷貨單 手抄單錯誤</option>
+            <option value="D 漏單">D 漏單</option>
+            <option value="E 未依客戶需求供貨">E 未依客戶需求供貨</option>
+            <option value="F 銷貨單未送達(未簽名)">F 銷貨單未送達(未簽名)</option>
+            <option value="G 交接事項">G 交接事項</option>
+            <option value="H 收回退貨">H 收回退貨</option>
+            <option value="I 出貨數量異常">I 出貨數量異常</option>
+          </select>
         </div>
         <div class="field">
-          <button class="btn btn-primary" onclick="submitAbnormal()">新增紀錄</button>
+          <label>責任歸屬</label>
+          <input type="text" id="ab-responsibility" placeholder="例：業務／倉儲／客戶／廠商">
+        </div>
+        <div class="field wide">
+          <label>補充說明</label>
+          <textarea id="ab-note" placeholder="其他補充說明（選填）"></textarea>
+        </div>
+        <div class="field">
+          <button class="btn btn-primary" id="ab-submit-btn" onclick="submitAbnormal()">新增紀錄</button>
+          <button class="btn btn-secondary" id="ab-cancel-btn" style="display:none;" onclick="cancelEdit('abnormal')">取消編輯</button>
         </div>
       </form>
     </div>
@@ -465,11 +508,11 @@
     <table>
       <thead>
         <tr>
-          <th>日期</th><th>車號</th><th>店家</th><th>原因</th><th>退/換貨</th><th class="col-del"></th>
+          <th>日期</th><th>車號</th><th>店家</th><th>狀況說明</th><th>處理方式</th><th>異常類別</th><th>責任歸屬</th><th>補充說明</th><th class="col-del"></th>
         </tr>
       </thead>
       <tbody id="ab-tbody">
-        <tr class="empty-row"><td colspan="6">尚無資料</td></tr>
+        <tr class="empty-row"><td colspan="9">尚無資料</td></tr>
       </tbody>
     </table>
     </div>
@@ -493,7 +536,8 @@
           <textarea id="ho-content" placeholder="請描述交接事項"></textarea>
         </div>
         <div class="field">
-          <button class="btn btn-primary" onclick="submitHandover()">新增紀錄</button>
+          <button class="btn btn-primary" id="ho-submit-btn" onclick="submitHandover()">新增紀錄</button>
+          <button class="btn btn-secondary" id="ho-cancel-btn" style="display:none;" onclick="cancelEdit('handover')">取消編輯</button>
         </div>
       </form>
     </div>
@@ -536,6 +580,30 @@ const GAS_URL = "https://script.google.com/macros/s/AKfycbwi2fQVqRyMcMBbuM3801wy
 
 const POLL_INTERVAL = 8000; // 多裝置同步輪詢間隔（毫秒）
 let pollTimer = null;
+
+let editingAbnormalId = null;
+let editingHandoverId = null;
+let abnormalRows = [];
+let handoverRows = [];
+
+function setFormMode(type, editing){
+  const prefix = type === 'abnormal' ? 'ab' : 'ho';
+  document.getElementById(prefix + '-submit-btn').textContent = editing ? '更新紀錄' : '新增紀錄';
+  document.getElementById(prefix + '-cancel-btn').style.display = editing ? 'inline-block' : 'none';
+}
+
+function cancelEdit(type){
+  if (type === 'abnormal'){
+    editingAbnormalId = null;
+    document.getElementById('form-abnormal').reset();
+    document.getElementById('ab-date').valueAsDate = new Date();
+  } else {
+    editingHandoverId = null;
+    document.getElementById('form-handover').reset();
+    document.getElementById('ho-date').valueAsDate = new Date();
+  }
+  setFormMode(type, false);
+}
 
 function switchTab(type){
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.type === type));
@@ -586,7 +654,10 @@ async function submitAbnormal(){
     carNo: document.getElementById('ab-carNo').value.trim(),
     store: document.getElementById('ab-store').value.trim(),
     reason: document.getElementById('ab-reason').value.trim(),
-    exchangeType: document.getElementById('ab-exchangeType').value
+    exchangeType: document.getElementById('ab-exchangeType').value,
+    category: document.getElementById('ab-category').value,
+    responsibility: document.getElementById('ab-responsibility').value.trim(),
+    note: document.getElementById('ab-note').value.trim()
   };
   if (!data.date || !data.store){
     showToast('請填寫日期與店家');
@@ -594,14 +665,39 @@ async function submitAbnormal(){
   }
   try{
     setSyncState('abnormal', 'loading');
-    await apiPost({ action: 'add', type: 'abnormal', data });
+    if (editingAbnormalId){
+      await apiPost({ action: 'update', type: 'abnormal', id: editingAbnormalId, data });
+      showToast('已更新異常紀錄');
+      editingAbnormalId = null;
+      setFormMode('abnormal', false);
+    } else {
+      await apiPost({ action: 'add', type: 'abnormal', data });
+      showToast('已新增異常紀錄');
+    }
     document.getElementById('form-abnormal').reset();
-    showToast('已新增異常紀錄');
+    document.getElementById('ab-date').valueAsDate = new Date();
     await refreshAbnormal();
   }catch(err){
     setSyncState('abnormal', 'error');
-    showToast('新增失敗：' + err.message);
+    showToast('儲存失敗：' + err.message);
   }
+}
+
+function editAbnormal(id){
+  const row = abnormalRows.find(r => r['id'] === id);
+  if (!row) return;
+  editingAbnormalId = id;
+  document.getElementById('ab-date').value = row['日期'] || '';
+  document.getElementById('ab-carNo').value = row['車號'] || '';
+  document.getElementById('ab-store').value = row['店家'] || '';
+  document.getElementById('ab-reason').value = row['狀況說明'] || '';
+  document.getElementById('ab-exchangeType').value = row['處理方式'] || '退貨';
+  document.getElementById('ab-category').value = row['異常類別'] || 'A 品質';
+  document.getElementById('ab-responsibility').value = row['責任歸屬'] || '';
+  document.getElementById('ab-note').value = row['補充說明'] || '';
+  setFormMode('abnormal', true);
+  switchTab('abnormal');
+  document.getElementById('form-abnormal').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 async function deleteAbnormal(id){
@@ -619,7 +715,7 @@ async function deleteAbnormal(id){
 function renderAbnormal(rows){
   const tbody = document.getElementById('ab-tbody');
   if (!rows || rows.length === 0){
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="6">尚無資料</td></tr>';
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="9">尚無資料</td></tr>';
     return;
   }
   tbody.innerHTML = rows.map(r => `
@@ -627,9 +723,15 @@ function renderAbnormal(rows){
       <td class="mono-cell">${escapeHtml(r['日期'])}</td>
       <td>${escapeHtml(r['車號'])}</td>
       <td>${escapeHtml(r['店家'])}</td>
-      <td>${escapeHtml(r['原因'])}</td>
-      <td><span class="chip ${chipClass(r['退換貨'])}">${escapeHtml(r['退換貨'])}</span></td>
-      <td class="col-del"><button class="btn btn-ghost" onclick="deleteAbnormal('${r['id']}')">✕</button></td>
+      <td>${escapeHtml(r['狀況說明'])}</td>
+      <td><span class="chip ${chipClass(r['處理方式'])}">${escapeHtml(r['處理方式'])}</span></td>
+      <td>${escapeHtml(r['異常類別'])}</td>
+      <td>${escapeHtml(r['責任歸屬'])}</td>
+      <td>${escapeHtml(r['補充說明'])}</td>
+      <td class="col-del">
+        <button class="btn btn-ghost" onclick="editAbnormal('${r['id']}')">✎</button>
+        <button class="btn btn-ghost" onclick="deleteAbnormal('${r['id']}')">✕</button>
+      </td>
     </tr>
   `).join('');
 }
@@ -638,6 +740,7 @@ async function refreshAbnormal(){
   try{
     setSyncState('abnormal', 'loading');
     const rows = await apiGet('abnormal');
+    abnormalRows = rows;
     renderAbnormal(rows);
     setSyncState('abnormal', 'synced');
     document.getElementById('ab-print-meta').textContent = `列印時間：${new Date().toLocaleString('zh-TW')}　共 ${rows.length} 筆`;
@@ -660,14 +763,34 @@ async function submitHandover(){
   }
   try{
     setSyncState('handover', 'loading');
-    await apiPost({ action: 'add', type: 'handover', data });
+    if (editingHandoverId){
+      await apiPost({ action: 'update', type: 'handover', id: editingHandoverId, data });
+      showToast('已更新交接紀錄');
+      editingHandoverId = null;
+      setFormMode('handover', false);
+    } else {
+      await apiPost({ action: 'add', type: 'handover', data });
+      showToast('已新增交接紀錄');
+    }
     document.getElementById('form-handover').reset();
-    showToast('已新增交接紀錄');
+    document.getElementById('ho-date').valueAsDate = new Date();
     await refreshHandover();
   }catch(err){
     setSyncState('handover', 'error');
-    showToast('新增失敗：' + err.message);
+    showToast('儲存失敗：' + err.message);
   }
+}
+
+function editHandover(id){
+  const row = handoverRows.find(r => r['id'] === id);
+  if (!row) return;
+  editingHandoverId = id;
+  document.getElementById('ho-date').value = row['日期'] || '';
+  document.getElementById('ho-store').value = row['店家'] || '';
+  document.getElementById('ho-content').value = row['交接事項'] || '';
+  setFormMode('handover', true);
+  switchTab('handover');
+  document.getElementById('form-handover').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 async function deleteHandover(id){
@@ -693,7 +816,10 @@ function renderHandover(rows){
       <td class="mono-cell">${escapeHtml(r['日期'])}</td>
       <td>${escapeHtml(r['店家'])}</td>
       <td>${escapeHtml(r['交接事項'])}</td>
-      <td class="col-del"><button class="btn btn-ghost" onclick="deleteHandover('${r['id']}')">✕</button></td>
+      <td class="col-del">
+        <button class="btn btn-ghost" onclick="editHandover('${r['id']}')">✎</button>
+        <button class="btn btn-ghost" onclick="deleteHandover('${r['id']}')">✕</button>
+      </td>
     </tr>
   `).join('');
 }
@@ -702,6 +828,7 @@ async function refreshHandover(){
   try{
     setSyncState('handover', 'loading');
     const rows = await apiGet('handover');
+    handoverRows = rows;
     renderHandover(rows);
     setSyncState('handover', 'synced');
     document.getElementById('ho-print-meta').textContent = `列印時間：${new Date().toLocaleString('zh-TW')}　共 ${rows.length} 筆`;
