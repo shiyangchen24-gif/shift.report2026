@@ -392,18 +392,18 @@
 
   /* ---------- Print ---------- */
   @media print{
-    @page{ size: A4 landscape; margin: 8mm; }
-    html, body{ width: 281mm; margin: 0; padding: 0; }
+    @page{ size: A4 landscape; margin: 18mm 10mm; }
+    html, body{ width: 277mm; margin: 0; padding: 0; }
     header, .card, .table-toolbar, .btn, .col-del{ display: none !important; }
     body{ background: #fff; }
-    main{ max-width: 281mm; width: 281mm; padding: 0; margin: 0; }
-    .table-wrap{ border: none; box-shadow: none; border-radius: 0; overflow: visible; max-height: none; width: 281mm; }
+    main{ max-width: 277mm; width: 277mm; padding: 0; margin: 0; }
+    .table-wrap{ border: none; box-shadow: none; border-radius: 0; overflow: visible; max-height: none; width: 277mm; }
     thead th{ position: static; }
     .print-title{ display: block !important; }
     table{
       font-size: 10px;
-      width: 281mm;
-      max-width: 281mm;
+      width: 277mm;
+      max-width: 277mm;
       table-layout: fixed;
     }
     th, td{
@@ -427,8 +427,9 @@
   }
   .print-meta{
     display: none;
-    font-size: 12px;
-    color: #555;
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
     margin-bottom: 14px;
   }
   @media print{
