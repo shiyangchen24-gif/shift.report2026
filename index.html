@@ -302,6 +302,55 @@
   .sync-dot.loading{ background: #d4d4d8; animation: pulse 1s infinite; }
   @keyframes pulse{ 50%{ opacity: .3; } }
 
+  #ab-print-only{ display: none; }
+
+  @media print{
+    #ab-table-wrap{ display: none !important; }
+    #ab-print-only{ display: block !important; }
+    .panel[data-type="abnormal"] .print-title,
+    .panel[data-type="abnormal"] .print-meta,
+    .panel[data-type="abnormal"] .legend{ display: none !important; }
+
+    .ab-print-page{ page-break-after: always; }
+    .ab-print-page:last-child{ page-break-after: auto; }
+
+    .ab-print-table{
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      font-family: "Microsoft JhengHei", "微軟正黑體", sans-serif;
+    }
+    .ab-print-table th, .ab-print-table td{
+      border: 1px solid #000 !important;
+      padding: 6px 6px;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      font-size: 14pt;
+    }
+    .ab-print-table .ab-title-row th{ font-size: 14pt; font-weight: 400; text-align: center; }
+    .ab-print-table .ab-legend-row th{ font-size: 11pt; font-weight: 400; text-align: center; }
+    .ab-print-table .ab-header-row th{ font-size: 12pt; font-weight: 400; text-align: center; }
+
+    /* 欄寬比例對照 Excel：日期/車號/客戶名稱/異常類別/狀況說明/處理方式/責任歸屬/補充說明 */
+    .ab-print-table col.c1{ width: 7.5%; }
+    .ab-print-table col.c2{ width: 7%; }
+    .ab-print-table col.c3{ width: 13.9%; }
+    .ab-print-table col.c4{ width: 7.9%; }
+    .ab-print-table col.c5{ width: 37.2%; }
+    .ab-print-table col.c6{ width: 10.3%; }
+    .ab-print-table col.c7{ width: 10.3%; }
+    .ab-print-table col.c8{ width: 5.9%; }
+
+    .ab-print-table tbody td:nth-child(1),
+    .ab-print-table tbody td:nth-child(2),
+    .ab-print-table tbody td:nth-child(3),
+    .ab-print-table tbody td:nth-child(4),
+    .ab-print-table tbody td:nth-child(6){ text-align: center; }
+    .ab-print-table tbody td:nth-child(5),
+    .ab-print-table tbody td:nth-child(7),
+    .ab-print-table tbody td:nth-child(8){ text-align: left; }
+  }
+
   #ho-print-only{ display: none; }
 
   #ho-print-table{
@@ -583,7 +632,7 @@
       </div>
     </div>
 
-    <div class="table-wrap">
+    <div class="table-wrap" id="ab-table-wrap">
     <table>
       <thead>
         <tr>
@@ -595,6 +644,9 @@
       </tbody>
     </table>
     </div>
+
+    <!-- 專門用於列印的異常表版面，格式對照 Excel 檔案，一頁最多 16 筆，超過自動分頁並重複表頭 -->
+    <div id="ab-print-only"></div>
   </section>
 
   <!-- ============ 交接表 ============ -->
@@ -960,6 +1012,55 @@ function escapeHtml(v){
     .replaceAll('"','&quot;').replaceAll("'",'&#39;');
 }
 
+function chunkArray(arr, size){
+  const chunks = [];
+  for (let i = 0; i < arr.length; i += size) chunks.push(arr.slice(i, i + size));
+  return chunks;
+}
+
+const AB_LEGEND_TEXT = '異常類別：A品質、B送貨延遲(送錯貨)、C銷貨單 手抄單錯誤、D漏單、E未依客戶需求供貨、F銷貨單未送達(未簽名)、G交接事項、H收回退貨、I出貨數量異常';
+
+function preparePrintAbnormal(){
+  const container = document.getElementById('ab-print-only');
+  const chunks = abnormalRows && abnormalRows.length ? chunkArray(abnormalRows, 16) : [[]];
+
+  const colgroup = `
+    <colgroup>
+      <col class="c1"><col class="c2"><col class="c3"><col class="c4">
+      <col class="c5"><col class="c6"><col class="c7"><col class="c8">
+    </colgroup>`;
+
+  container.innerHTML = chunks.map(chunk => `
+    <div class="ab-print-page">
+      <table class="ab-print-table">
+        ${colgroup}
+        <thead>
+          <tr class="ab-title-row"><th colspan="8">忠欣蔬果有限公司</th></tr>
+          <tr class="ab-title-row"><th colspan="8">每日交接事件一覽表</th></tr>
+          <tr class="ab-legend-row"><th colspan="8">${AB_LEGEND_TEXT}</th></tr>
+          <tr class="ab-header-row">
+            <th>日期</th><th>車號</th><th>客戶名稱</th><th>異常類別</th><th>狀況說明</th><th>處理方式</th><th>責任歸屬</th><th>補充說明</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${chunk.length ? chunk.map(r => `
+            <tr>
+              <td>${escapeHtml(r['日期'])}</td>
+              <td>${escapeHtml(r['車號'])}</td>
+              <td>${escapeHtml(r['店家'])}</td>
+              <td>${escapeHtml(r['異常類別'])}</td>
+              <td>${escapeHtml(r['狀況說明'])}</td>
+              <td>${escapeHtml(r['處理方式'])}</td>
+              <td>${escapeHtml(r['責任歸屬'])}</td>
+              <td>${escapeHtml(r['補充說明'])}</td>
+            </tr>
+          `).join('') : '<tr><td colspan="8" style="text-align:center;padding:20px;">尚無資料</td></tr>'}
+        </tbody>
+      </table>
+    </div>
+  `).join('');
+}
+
 function setPageOrientation(orientation){
   let styleTag = document.getElementById('dynamic-page-style');
   if (!styleTag){
@@ -994,9 +1095,7 @@ function printPanel(type){
     preparePrintHandover();
   } else {
     setPageOrientation('landscape');
-    // 印表前先更新一次列印時間戳記
-    const meta = document.getElementById('ab-print-meta');
-    meta.textContent = meta.textContent.replace(/列印時間：.*?　/, `列印時間：${new Date().toLocaleString('zh-TW')}　`);
+    preparePrintAbnormal();
   }
   switchTab(type);
   setTimeout(() => window.print(), 50);
