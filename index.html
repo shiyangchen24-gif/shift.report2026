@@ -183,6 +183,19 @@
     align-items: end;
   }
 
+  .field-divider{
+    grid-column: 1 / -1;
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 700;
+    color: var(--text-faint);
+    padding-top: 14px;
+    margin-top: 2px;
+    border-top: 1px dashed var(--border-strong);
+  }
+  .field-divider:first-child{ border-top: none; padding-top: 0; margin-top: 0; }
+
   .field{ display: flex; flex-direction: column; gap: 7px; }
   .field.wide{ grid-column: 1 / -1; }
 
@@ -293,7 +306,8 @@
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    overflow: hidden;
+    overflow: auto;
+    max-height: 62vh;
     box-shadow: var(--shadow-sm);
   }
 
@@ -319,6 +333,9 @@
     white-space: nowrap;
     background: var(--surface);
     border-bottom: 1px solid var(--border-strong);
+    position: sticky;
+    top: 0;
+    z-index: 1;
   }
 
   tbody tr{ transition: background .1s ease; }
@@ -346,9 +363,11 @@
   .empty-row td{
     text-align: center;
     color: var(--text-faint);
-    padding: 32px;
+    padding: 40px;
     border-bottom: none;
+    font-size: 14px;
   }
+  .empty-row .empty-icon{ display: block; font-size: 22px; margin-bottom: 6px; opacity: .6; }
 
   .col-del{ width: 68px; text-align: right; white-space: nowrap; }
 
@@ -373,13 +392,22 @@
 
   /* ---------- Print ---------- */
   @media print{
+    @page{ size: A4 landscape; margin: 10mm; }
+    html, body{ width: 100%; }
     header, .card, .table-toolbar, .btn, .col-del{ display: none !important; }
     body{ background: #fff; }
-    main{ max-width: none; padding: 0; margin: 0; }
-    .table-wrap{ border: none; box-shadow: none; border-radius: 0; }
+    main{ max-width: none; width: 100%; padding: 0; margin: 0; }
+    .table-wrap{ border: none; box-shadow: none; border-radius: 0; overflow: visible; max-height: none; }
+    thead th{ position: static; }
     .print-title{ display: block !important; }
-    table{ font-size: 12px; }
-    th, td{ border: 1px solid #000 !important; padding: 6px 8px; }
+    table{ font-size: 11px; width: 100%; table-layout: fixed; }
+    th, td{
+      border: 1px solid #000 !important;
+      padding: 5px 6px;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      white-space: normal !important;
+    }
     th{ background: #eee !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .chip{ background: transparent !important; color: #000 !important; border: none !important; padding: 0; font-weight: 700; }
     .chip::before{ display: none; }
@@ -439,6 +467,7 @@
     <div class="card">
       <h2>新增異常紀錄</h2>
       <form id="form-abnormal" class="form-grid" onsubmit="return false;">
+        <div class="field-divider">基本資訊</div>
         <div class="field">
           <label>日期</label>
           <input type="date" id="ab-date" required>
@@ -451,6 +480,8 @@
           <label>店家</label>
           <input type="text" id="ab-store" placeholder="店家名稱" required>
         </div>
+
+        <div class="field-divider">異常內容</div>
         <div class="field wide">
           <label>狀況說明</label>
           <textarea id="ab-reason" placeholder="請描述異常狀況"></textarea>
@@ -512,7 +543,7 @@
         </tr>
       </thead>
       <tbody id="ab-tbody">
-        <tr class="empty-row"><td colspan="9">尚無資料</td></tr>
+        <tr class="empty-row"><td colspan="9"><span class="empty-icon">📋</span>尚無資料</td></tr>
       </tbody>
     </table>
     </div>
@@ -561,7 +592,7 @@
         </tr>
       </thead>
       <tbody id="ho-tbody">
-        <tr class="empty-row"><td colspan="4">尚無資料</td></tr>
+        <tr class="empty-row"><td colspan="4"><span class="empty-icon">📋</span>尚無資料</td></tr>
       </tbody>
     </table>
     </div>
@@ -715,7 +746,7 @@ async function deleteAbnormal(id){
 function renderAbnormal(rows){
   const tbody = document.getElementById('ab-tbody');
   if (!rows || rows.length === 0){
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="9">尚無資料</td></tr>';
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="9"><span class="empty-icon">📋</span>尚無資料</td></tr>';
     return;
   }
   tbody.innerHTML = rows.map(r => `
@@ -808,7 +839,7 @@ async function deleteHandover(id){
 function renderHandover(rows){
   const tbody = document.getElementById('ho-tbody');
   if (!rows || rows.length === 0){
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="4">尚無資料</td></tr>';
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="4"><span class="empty-icon">📋</span>尚無資料</td></tr>';
     return;
   }
   tbody.innerHTML = rows.map(r => `
