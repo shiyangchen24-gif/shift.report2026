@@ -392,21 +392,27 @@
 
   /* ---------- Print ---------- */
   @media print{
-    @page{ size: A4 landscape; margin: 10mm; }
-    html, body{ width: 100%; }
+    @page{ size: A4 landscape; margin: 8mm; }
+    html, body{ width: 281mm; margin: 0; padding: 0; }
     header, .card, .table-toolbar, .btn, .col-del{ display: none !important; }
     body{ background: #fff; }
-    main{ max-width: none; width: 100%; padding: 0; margin: 0; }
-    .table-wrap{ border: none; box-shadow: none; border-radius: 0; overflow: visible; max-height: none; }
+    main{ max-width: 281mm; width: 281mm; padding: 0; margin: 0; }
+    .table-wrap{ border: none; box-shadow: none; border-radius: 0; overflow: visible; max-height: none; width: 281mm; }
     thead th{ position: static; }
     .print-title{ display: block !important; }
-    table{ font-size: 11px; width: 100%; table-layout: fixed; }
+    table{
+      font-size: 10px;
+      width: 281mm;
+      max-width: 281mm;
+      table-layout: fixed;
+    }
     th, td{
       border: 1px solid #000 !important;
-      padding: 5px 6px;
-      word-wrap: break-word;
-      overflow-wrap: break-word;
+      padding: 4px 5px;
+      word-break: break-word;
+      overflow-wrap: anywhere;
       white-space: normal !important;
+      max-width: 0; /* forces fixed-layout columns to respect table width instead of expanding to content */
     }
     th{ background: #eee !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .chip{ background: transparent !important; color: #000 !important; border: none !important; padding: 0; font-weight: 700; }
