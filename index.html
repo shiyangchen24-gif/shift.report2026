@@ -1,30 +1,1106 @@
+
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>異常表與交接表</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <style>
-:root{
---bg: #F6F6F8;
-@@ -628,7 +629,7 @@ <h2>新增異常紀錄</h2>
-<span class="status"><span class="sync-dot" id="ab-sync-dot"></span><span id="ab-sync-text">已同步</span></span>
-<div>
-<button class="btn btn-danger" onclick="clearAll('abnormal')">🗑 刪除全部</button>
-        <button class="btn btn-secondary" onclick="printPanel('abnormal')">🖨 列印</button>
+  :root{
+    --bg: #F6F6F8;
+    --surface: #FFFFFF;
+    --surface-2: #EFEFF2;
+    --border: #E3E3E8;
+    --border-strong: #D2D2D9;
+    --text: #16161A;
+    --text-soft: #6D6D78;
+    --text-faint: #A1A1AA;
+
+    --abnormal: #E1123F;
+    --abnormal-soft: #FDECF0;
+    --abnormal-line: #F7C6D2;
+
+    --handover: #2952E3;
+    --handover-soft: #EAEFFD;
+    --handover-line: #C4D0FA;
+
+    --accent: var(--abnormal);
+    --accent-soft: var(--abnormal-soft);
+    --accent-line: var(--abnormal-line);
+
+    --radius: 10px;
+    --shadow-sm: 0 1px 2px rgba(15,15,20,0.05);
+    --shadow-md: 0 4px 16px rgba(15,15,20,0.06), 0 1px 3px rgba(15,15,20,0.04);
+  }
+
+  * { box-sizing: border-box; }
+
+  body{
+    margin:0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Inter", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    letter-spacing: -0.005em;
+  }
+
+  .mono{ font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace; }
+
+  header{
+    background: rgba(246,246,248,0.85);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 28px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+
+  .brand{
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .brand .mark{
+    width: 34px; height: 34px;
+    border-radius: 9px;
+    background: linear-gradient(135deg, var(--abnormal-soft), var(--handover-soft));
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 19px;
+    line-height: 1;
+  }
+
+  .brand h1{
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin: 0;
+    line-height: 1.2;
+  }
+
+  .brand .sub{
+    font-size: 13px;
+    color: var(--text-faint);
+    font-weight: 500;
+  }
+
+  .tabs{
+    display: inline-flex;
+    gap: 2px;
+    background: var(--surface-2);
+    padding: 3px;
+    border-radius: 9px;
+    border: 1px solid var(--border);
+  }
+
+  .tab{
+    appearance: none;
+    border: none;
+    background: transparent;
+    padding: 9px 18px;
+    font-size: 15.5px;
+    font-weight: 600;
+    color: var(--text-soft);
+    cursor: pointer;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    transition: color .15s ease, background .15s ease, box-shadow .15s ease;
+  }
+
+  .tab .dot{
+    width: 6px; height: 6px; border-radius: 50%;
+    background: currentColor;
+    opacity: .55;
+  }
+
+  .tab.active{
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+  }
+  .tab.active[data-type="abnormal"]{ color: var(--abnormal); }
+  .tab.active[data-type="handover"]{ color: var(--handover); }
+  .tab.active .dot{ opacity: 1; }
+  .tab:not(.active):hover{ color: var(--text); }
+
+  main{
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 28px;
+  }
+
+  .panel{ display: none; }
+  .panel.active{ display: block; animation: fadein .18s ease; }
+  @keyframes fadein{ from{ opacity: 0; transform: translateY(2px);} to{ opacity: 1; transform: translateY(0);} }
+
+  .panel[data-type="abnormal"]{ --accent: var(--abnormal); --accent-soft: var(--abnormal-soft); --accent-line: var(--abnormal-line); }
+  .panel[data-type="handover"]{ --accent: var(--handover); --accent-soft: var(--handover-soft); --accent-line: var(--handover-line); }
+
+  .card{
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    padding: 22px;
+    margin-bottom: 22px;
+  }
+
+  .card h2{
+    font-size: 15px;
+    color: var(--text);
+    margin: 0 0 18px 0;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card h2::before{
+    content: "";
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  .form-grid{
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 16px;
+    align-items: end;
+  }
+
+  .field-divider{
+    grid-column: 1 / -1;
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 700;
+    color: var(--text-faint);
+    padding-top: 14px;
+    margin-top: 2px;
+    border-top: 1px dashed var(--border-strong);
+  }
+  .field-divider:first-child{ border-top: none; padding-top: 0; margin-top: 0; }
+
+  .field{ display: flex; flex-direction: column; gap: 7px; }
+  .field.wide{ grid-column: 1 / -1; }
+
+  label{
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text-soft);
+  }
+
+  input[type="text"], input[type="date"], select, textarea{
+    border: 1px solid var(--border-strong);
+    border-radius: 7px;
+    padding: 11px 13px;
+    font-size: 16px;
+    font-family: inherit;
+    background: var(--surface);
+    color: var(--text);
+    outline: none;
+    transition: border-color .15s ease, box-shadow .15s ease;
+  }
+
+  input:focus, select:focus, textarea:focus{
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+
+  textarea{ resize: vertical; min-height: 40px; }
+
+  .btn{
+    appearance: none;
+    border: none;
+    border-radius: 7px;
+    padding: 11px 18px;
+    font-size: 15.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity .15s ease, background .15s ease, transform .05s ease, border-color .15s ease;
+  }
+  .btn:active{ transform: translateY(1px); }
+  .btn-primary{ background: var(--accent); color: #fff; box-shadow: var(--shadow-sm); }
+  .btn-primary:hover{ opacity: .92; }
+  .btn-secondary{
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    color: var(--text);
+  }
+  .btn-secondary:hover{ border-color: var(--accent); color: var(--accent); }
+  .btn-danger{
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--abnormal);
+    margin-right: 4px;
+  }
+  .btn-danger:hover{ background: var(--abnormal-soft); }
+  .btn-ghost{
+    background: transparent;
+    color: var(--text-faint);
+    padding: 5px 9px;
+    font-weight: 600;
+    font-size: 15px;
+    border-radius: 5px;
+  }
+  .btn-ghost:hover{ color: var(--abnormal); background: var(--abnormal-soft); }
+
+  .legend{
+    background: var(--accent-soft, #F4F4F6);
+    border: 1px solid var(--accent-line, var(--border));
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    font-size: 13.5px;
+    color: var(--text-soft);
+    line-height: 1.6;
+    margin-bottom: 18px;
+  }
+  .legend strong{ color: var(--text); font-weight: 700; }
+
+  @media print{
+    .legend{ border: none; background: none; padding: 0 0 10px 0; border-bottom: 1px solid #000; border-radius: 0; color: #000; font-size: 12px; }
+  }
+
+  .table-toolbar{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .table-toolbar .status{
+    font-size: 14px;
+    color: var(--text-faint);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 500;
+  }
+
+  .sync-dot{
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #16a34a;
+    display: inline-block;
+  }
+  .sync-dot.loading{ background: #d4d4d8; animation: pulse 1s infinite; }
+  @keyframes pulse{ 50%{ opacity: .3; } }
+
+  #ab-print-only{ display: none; }
+
+  @media print{
+    #ab-table-wrap{ display: none !important; }
+    #ab-print-only{ display: block !important; }
+    .panel[data-type="abnormal"] .print-title,
+    .panel[data-type="abnormal"] .print-meta,
+    .panel[data-type="abnormal"] .legend{ display: none !important; }
+
+    .ab-print-page{ page-break-after: always; }
+    .ab-print-page:last-child{ page-break-after: auto; }
+
+    .ab-print-table{
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      font-family: "Microsoft JhengHei", "微軟正黑體", sans-serif;
+    }
+    .ab-print-table th, .ab-print-table td{
+      border: 1px solid #000 !important;
+      padding: 6px 6px;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      font-size: 14pt;
+    }
+    .ab-print-table .ab-title-row th{ font-size: 14pt; font-weight: 400; text-align: center; }
+    .ab-print-table .ab-legend-row th{ font-size: 11pt; font-weight: 400; text-align: center; }
+    .ab-print-table .ab-header-row th{ font-size: 12pt; font-weight: 400; text-align: center; }
+
+    /* 欄寬比例對照 Excel：日期/車號/客戶名稱/異常類別/狀況說明/處理方式/責任歸屬/補充說明 */
+    .ab-print-table col.c1{ width: 7.5%; }
+    .ab-print-table col.c2{ width: 7%; }
+    .ab-print-table col.c3{ width: 13.9%; }
+    .ab-print-table col.c4{ width: 7.9%; }
+    .ab-print-table col.c5{ width: 37.2%; }
+    .ab-print-table col.c6{ width: 10.3%; }
+    .ab-print-table col.c7{ width: 10.3%; }
+    .ab-print-table col.c8{ width: 5.9%; }
+
+    .ab-print-table tbody td:nth-child(1),
+    .ab-print-table tbody td:nth-child(2),
+    .ab-print-table tbody td:nth-child(3),
+    .ab-print-table tbody td:nth-child(4),
+    .ab-print-table tbody td:nth-child(6){ text-align: center; }
+    .ab-print-table tbody td:nth-child(5),
+    .ab-print-table tbody td:nth-child(7),
+    .ab-print-table tbody td:nth-child(8){ text-align: left; }
+  }
+
+  #ho-print-only{ display: none; }
+
+  #ho-print-table{
+    border-collapse: collapse;
+  }
+  #ho-print-table th, #ho-print-table td{
+    border: 1px solid #000;
+    padding: 6px 8px;
+  }
+  #ho-print-title-cell{
+    font-weight: 700;
+    text-align: center;
+  }
+
+  @media print{
+    #ho-table-wrap{ display: none !important; }
+    #ho-print-only{ display: block !important; }
+    .panel[data-type="handover"] .print-title,
+    .panel[data-type="handover"] .print-meta{ display: none !important; }
+    #ho-print-table{
+      width: 100%;
+      table-layout: fixed;
+      font-family: "Microsoft JhengHei", "微軟正黑體", "PMingLiU", sans-serif;
+    }
+    #ho-print-table th, #ho-print-table td{
+      border: 1px solid #000 !important;
+      font-size: 12pt;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+    }
+    #ho-print-title-cell{
+      font-size: 14pt;
+      font-weight: 700;
+      text-align: center;
+      height: 30px;
+    }
+    #ho-print-table thead tr:nth-child(2) th:nth-child(1){ width: 15%; }
+    #ho-print-table thead tr:nth-child(2) th:nth-child(2){ width: 85%; }
+    #ho-print-table td:first-child{ width: 15%; text-align: center; }
+  }
+
+  .table-wrap{
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: auto;
+    max-height: 62vh;
+    box-shadow: var(--shadow-sm);
+  }
+
+  table{
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 15.5px;
+  }
+
+  th, td{
+    padding: 13px 16px;
+    text-align: left;
+    vertical-align: top;
+    border-bottom: 1px solid var(--border);
+  }
+
+  th{
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 700;
+    color: var(--text-faint);
+    white-space: nowrap;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border-strong);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+
+  tbody tr{ transition: background .1s ease; }
+  tbody tr:hover{ background: var(--surface-2); }
+  tbody tr:last-child td{ border-bottom: none; }
+
+  td.mono-cell{ font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 14.5px; color: var(--text-soft); white-space: nowrap; }
+
+  .chip{
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 12px 4px 9px;
+    border-radius: 100px;
+    font-size: 13.5px;
+    font-weight: 600;
+    border: 1px solid transparent;
+  }
+  .chip::before{ content:""; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+  .chip.return{ background: #FDECF0; color: #C11448; border-color: #F7C6D2; }
+  .chip.exchange{ background: #EAEFFD; color: #2952E3; border-color: #C4D0FA; }
+  .chip.reaction{ background: #FEF6E7; color: #B4720A; border-color: #F5DFAD; }
+  .chip.restock{ background: #EAFAF0; color: #0F8B4C; border-color: #BEEBD1; }
+
+  .empty-row td{
+    text-align: center;
+    color: var(--text-faint);
+    padding: 40px;
+    border-bottom: none;
+    font-size: 14px;
+  }
+  .empty-row .empty-icon{ display: block; font-size: 22px; margin-bottom: 6px; opacity: .6; }
+
+  .col-del{ width: 68px; text-align: right; white-space: nowrap; }
+
+  .toast{
+    position: fixed;
+    bottom: 22px;
+    left: 50%;
+    transform: translateX(-50%) translateY(10px);
+    background: var(--text);
+    color: #fff;
+    padding: 11px 20px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 500;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s ease, transform .2s ease;
+    z-index: 100;
+    box-shadow: var(--shadow-md);
+  }
+  .toast.show{ opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ---------- Print ---------- */
+  @media print{
+    @page{ size: A4 landscape; margin: 18mm 10mm; }
+    html, body{ width: 277mm; margin: 0; padding: 0; }
+    header, .card, .table-toolbar, .btn, .col-del{ display: none !important; }
+    body{ background: #fff; }
+    main{ max-width: 277mm; width: 277mm; padding: 0; margin: 0; }
+    .table-wrap{ border: none; box-shadow: none; border-radius: 0; overflow: visible; max-height: none; width: 277mm; }
+    thead th{ position: static; }
+    .print-title{ display: block !important; }
+    table{
+      font-size: 10px;
+      width: 277mm;
+      max-width: 277mm;
+      table-layout: fixed;
+    }
+    th, td{
+      border: 1px solid #000 !important;
+      padding: 4px 5px;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      white-space: normal !important;
+      max-width: 0; /* forces fixed-layout columns to respect table width instead of expanding to content */
+    }
+    th{ background: none !important; }
+    .chip{ background: transparent !important; color: #000 !important; border: none !important; padding: 0; font-weight: 700; }
+    .chip::before{ display: none; }
+  }
+
+  .print-title{
+    display: none;
+    font-size: 18px;
+    font-weight: 700;
+    margin: 0 0 4px 0;
+  }
+  .print-meta{
+    display: none;
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 14px;
+  }
+  @media print{
+    .print-meta{ display: block; }
+  }
+
+  @media (max-width: 640px){
+    header{ padding: 14px 16px; }
+    main{ padding: 16px; }
+    .form-grid{ grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <span class="mark">🐶</span>
+    <div>
+      <h1>異常表與交接表</h1>
+      <div class="sub">多裝置即時同步</div>
+    </div>
+  </div>
+  <div class="tabs">
+    <button class="tab active" data-type="abnormal" onclick="switchTab('abnormal')">
+      <span class="dot"></span>異常表
+    </button>
+    <button class="tab" data-type="handover" onclick="switchTab('handover')">
+      <span class="dot"></span>交接表
+    </button>
+  </div>
+</header>
+
+<main>
+
+  <!-- ============ 異常表 ============ -->
+  <section class="panel active" data-type="abnormal">
+    <div class="legend">
+      <strong>異常類別：</strong>A品質、B送貨延遲(送錯貨)、C銷貨單 手抄單錯誤、D漏單、E未依客戶需求供貨、F銷貨單未送達(未簽名)、G交接事項、H收回退貨、I出貨數量異常
+    </div>
+
+    <div class="card">
+      <h2>新增異常紀錄</h2>
+      <form id="form-abnormal" class="form-grid" onsubmit="return false;">
+        <div class="field-divider">基本資訊</div>
+        <div class="field">
+          <label>日期</label>
+          <input type="date" id="ab-date" required>
+        </div>
+        <div class="field">
+          <label>車號</label>
+          <input type="text" id="ab-carNo" placeholder="例：ABC-1234">
+        </div>
+        <div class="field">
+          <label>店家</label>
+          <input type="text" id="ab-store" placeholder="店家名稱" required>
+        </div>
+
+        <div class="field-divider">異常內容</div>
+        <div class="field wide">
+          <label>狀況說明</label>
+          <textarea id="ab-reason" placeholder="請描述異常狀況"></textarea>
+        </div>
+        <div class="field">
+          <label>處理方式</label>
+          <select id="ab-exchangeType">
+            <option value="退貨">退貨</option>
+            <option value="換貨">換貨</option>
+            <option value="反應">反應</option>
+            <option value="補貨">補貨</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>異常類別</label>
+          <select id="ab-category">
+            <option value="A 品質">A 品質</option>
+            <option value="B 送貨延遲(送錯貨)">B 送貨延遲(送錯貨)</option>
+            <option value="C 銷貨單 手抄單錯誤">C 銷貨單 手抄單錯誤</option>
+            <option value="D 漏單">D 漏單</option>
+            <option value="E 未依客戶需求供貨">E 未依客戶需求供貨</option>
+            <option value="F 銷貨單未送達(未簽名)">F 銷貨單未送達(未簽名)</option>
+            <option value="G 交接事項">G 交接事項</option>
+            <option value="H 收回退貨">H 收回退貨</option>
+            <option value="I 出貨數量異常">I 出貨數量異常</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>責任歸屬</label>
+          <input type="text" id="ab-responsibility" placeholder="例：業務／倉儲／客戶／廠商">
+        </div>
+        <div class="field wide">
+          <label>補充說明</label>
+          <textarea id="ab-note" placeholder="其他補充說明（選填）"></textarea>
+        </div>
+        <div class="field">
+          <button class="btn btn-primary" id="ab-submit-btn" onclick="submitAbnormal()">新增紀錄</button>
+          <button class="btn btn-secondary" id="ab-cancel-btn" style="display:none;" onclick="cancelEdit('abnormal')">取消編輯</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="print-title">異常表</div>
+    <div class="print-meta" id="ab-print-meta"></div>
+
+    <div class="table-toolbar">
+      <span class="status"><span class="sync-dot" id="ab-sync-dot"></span><span id="ab-sync-text">已同步</span></span>
+      <div>
+        <button class="btn btn-danger" onclick="clearAll('abnormal')">🗑 刪除全部</button>
         <button class="btn btn-secondary" onclick="exportAbnormalExcel()">📥 匯出 Excel</button>
-</div>
-</div>
+      </div>
+    </div>
 
-@@ -680,7 +681,7 @@ <h2>新增交接事項</h2>
-<span class="status"><span class="sync-dot" id="ho-sync-dot"></span><span id="ho-sync-text">已同步</span></span>
-<div>
-<button class="btn btn-danger" onclick="clearAll('handover')">🗑 刪除全部</button>
-        <button class="btn btn-secondary" onclick="printPanel('handover')">🖨 列印</button>
+    <div class="table-wrap" id="ab-table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>日期</th><th>車號</th><th>店家</th><th>狀況說明</th><th>處理方式</th><th>異常類別</th><th>責任歸屬</th><th>補充說明</th><th class="col-del"></th>
+        </tr>
+      </thead>
+      <tbody id="ab-tbody">
+        <tr class="empty-row"><td colspan="9"><span class="empty-icon">📋</span>尚無資料</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <!-- 專門用於列印的異常表版面，格式對照 Excel 檔案，一頁最多 16 筆，超過自動分頁並重複表頭 -->
+    <div id="ab-print-only"></div>
+  </section>
+
+  <!-- ============ 交接表 ============ -->
+  <section class="panel" data-type="handover">
+    <div class="card">
+      <h2>新增交接事項</h2>
+      <form id="form-handover" class="form-grid" onsubmit="return false;">
+        <div class="field">
+          <label>日期</label>
+          <input type="date" id="ho-date" required>
+        </div>
+        <div class="field">
+          <label>客戶名稱+車號</label>
+          <input type="text" id="ho-store" placeholder="例：王小明 ABC-1234" required>
+        </div>
+        <div class="field wide">
+          <label>事項</label>
+          <textarea id="ho-content" placeholder="請描述交接事項"></textarea>
+        </div>
+        <div class="field">
+          <button class="btn btn-primary" id="ho-submit-btn" onclick="submitHandover()">新增紀錄</button>
+          <button class="btn btn-secondary" id="ho-cancel-btn" style="display:none;" onclick="cancelEdit('handover')">取消編輯</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="print-title">交接表</div>
+    <div class="print-meta" id="ho-print-meta"></div>
+
+    <div class="table-toolbar">
+      <span class="status"><span class="sync-dot" id="ho-sync-dot"></span><span id="ho-sync-text">已同步</span></span>
+      <div>
+        <button class="btn btn-danger" onclick="clearAll('handover')">🗑 刪除全部</button>
         <button class="btn btn-secondary" onclick="exportHandoverExcel()">📥 匯出 Excel</button>
-</div>
-</div>
+      </div>
+    </div>
 
-@@ -1101,6 +1102,160 @@ <h2>新增交接事項</h2>
-setTimeout(() => window.print(), 50);
+    <div class="table-wrap" id="ho-table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>日期</th><th>客戶名稱+車號</th><th>事項</th><th class="col-del"></th>
+        </tr>
+      </thead>
+      <tbody id="ho-tbody">
+        <tr class="empty-row"><td colspan="4"><span class="empty-icon">📋</span>尚無資料</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <!-- 專門用於列印的交接表版面，格式對照 Excel 檔案（標題列合併置中、兩欄、細格線） -->
+    <div id="ho-print-only">
+      <table id="ho-print-table">
+        <thead>
+          <tr><th colspan="2" id="ho-print-title-cell">交接事項</th></tr>
+          <tr><th>客戶名稱+車號</th><th>事項</th></tr>
+        </thead>
+        <tbody id="ho-print-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================
+   請將下面這行換成你自己部署的 Google Apps Script 網址
+   （部署 > 新增部署作業 > 網頁應用程式 之後取得的網址）
+   ========================================================= */
+const GAS_URL = "https://script.google.com/macros/s/AKfycbwi2fQVqRyMcMBbuM3801wyhMT_YCUv_EgIOpxYOmCYI9rHP5uvNmba0usY15nlRYHn8A/exec";
+
+const POLL_INTERVAL = 8000; // 多裝置同步輪詢間隔（毫秒）
+let pollTimer = null;
+
+let editingAbnormalId = null;
+let editingHandoverId = null;
+let abnormalRows = [];
+let handoverRows = [];
+
+function setFormMode(type, editing){
+  const prefix = type === 'abnormal' ? 'ab' : 'ho';
+  document.getElementById(prefix + '-submit-btn').textContent = editing ? '更新紀錄' : '新增紀錄';
+  document.getElementById(prefix + '-cancel-btn').style.display = editing ? 'inline-block' : 'none';
+}
+
+function cancelEdit(type){
+  if (type === 'abnormal'){
+    editingAbnormalId = null;
+    document.getElementById('form-abnormal').reset();
+    document.getElementById('ab-date').valueAsDate = new Date();
+  } else {
+    editingHandoverId = null;
+    document.getElementById('form-handover').reset();
+    document.getElementById('ho-date').valueAsDate = new Date();
+  }
+  setFormMode(type, false);
+}
+
+function switchTab(type){
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.type === type));
+  document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.dataset.type === type));
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function setSyncState(type, state){
+  // state: 'loading' | 'synced' | 'error'
+  const dot = document.getElementById(type === 'abnormal' ? 'ab-sync-dot' : 'ho-sync-dot');
+  const text = document.getElementById(type === 'abnormal' ? 'ab-sync-text' : 'ho-sync-text');
+  dot.classList.toggle('loading', state === 'loading');
+  dot.style.background = state === 'error' ? '#ef4444' : (state === 'loading' ? '' : '#22c55e');
+  text.textContent = state === 'error' ? '同步失敗' : (state === 'loading' ? '同步中…' : '已同步');
+}
+
+async function apiGet(type){
+  const url = `${GAS_URL}?action=list&type=${type}&_=${Date.now()}`;
+  const res = await fetch(url, { method: 'GET' });
+  const json = await res.json();
+  if (!json.success) throw new Error(json.error || '讀取失敗');
+  return json.data;
+}
+
+async function apiPost(payload){
+  // 使用 text/plain 避免瀏覽器對 GAS 送出 CORS 預檢請求
+  const res = await fetch(GAS_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(payload)
+  });
+  const json = await res.json();
+  if (!json.success) throw new Error(json.error || '寫入失敗');
+  return json;
+}
+
+/* ---------------- 異常表 ---------------- */
+
+async function submitAbnormal(){
+  const data = {
+    date: document.getElementById('ab-date').value,
+    carNo: document.getElementById('ab-carNo').value.trim(),
+    store: document.getElementById('ab-store').value.trim(),
+    reason: document.getElementById('ab-reason').value.trim(),
+    exchangeType: document.getElementById('ab-exchangeType').value,
+    category: document.getElementById('ab-category').value,
+    responsibility: document.getElementById('ab-responsibility').value.trim(),
+    note: document.getElementById('ab-note').value.trim()
+  };
+  if (!data.date || !data.store){
+    showToast('請填寫日期與店家');
+    return;
+  }
+  try{
+    setSyncState('abnormal', 'loading');
+    if (editingAbnormalId){
+      await apiPost({ action: 'update', type: 'abnormal', id: editingAbnormalId, data });
+      showToast('已更新異常紀錄');
+      editingAbnormalId = null;
+      setFormMode('abnormal', false);
+    } else {
+      await apiPost({ action: 'add', type: 'abnormal', data });
+      showToast('已新增異常紀錄');
+    }
+    document.getElementById('form-abnormal').reset();
+    document.getElementById('ab-date').valueAsDate = new Date();
+    await refreshAbnormal();
+  }catch(err){
+    setSyncState('abnormal', 'error');
+    showToast('儲存失敗：' + err.message);
+  }
+}
+
+function editAbnormal(id){
+  const row = abnormalRows.find(r => r['id'] === id);
+  if (!row) return;
+  editingAbnormalId = id;
+  document.getElementById('ab-date').value = row['日期'] || '';
+  document.getElementById('ab-carNo').value = row['車號'] || '';
+  document.getElementById('ab-store').value = row['店家'] || '';
+  document.getElementById('ab-reason').value = row['狀況說明'] || '';
+  document.getElementById('ab-exchangeType').value = row['處理方式'] || '退貨';
+  document.getElementById('ab-category').value = row['異常類別'] || 'A 品質';
+  document.getElementById('ab-responsibility').value = row['責任歸屬'] || '';
+  document.getElementById('ab-note').value = row['補充說明'] || '';
+  setFormMode('abnormal', true);
+  switchTab('abnormal');
+  document.getElementById('form-abnormal').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function deleteAbnormal(id){
+  if (!confirm('確定要刪除這筆異常紀錄嗎？')) return;
+  try{
+    setSyncState('abnormal', 'loading');
+    await apiPost({ action: 'delete', type: 'abnormal', id });
+    await refreshAbnormal();
+  }catch(err){
+    setSyncState('abnormal', 'error');
+    showToast('刪除失敗：' + err.message);
+  }
+}
+
+function renderAbnormal(rows){
+  const tbody = document.getElementById('ab-tbody');
+  if (!rows || rows.length === 0){
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="9"><span class="empty-icon">📋</span>尚無資料</td></tr>';
+    return;
+  }
+  tbody.innerHTML = rows.map(r => `
+    <tr>
+      <td class="mono-cell">${escapeHtml(r['日期'])}</td>
+      <td>${escapeHtml(r['車號'])}</td>
+      <td>${escapeHtml(r['店家'])}</td>
+      <td>${escapeHtml(r['狀況說明'])}</td>
+      <td><span class="chip ${chipClass(r['處理方式'])}">${escapeHtml(r['處理方式'])}</span></td>
+      <td>${escapeHtml(r['異常類別'])}</td>
+      <td>${escapeHtml(r['責任歸屬'])}</td>
+      <td>${escapeHtml(r['補充說明'])}</td>
+      <td class="col-del">
+        <button class="btn btn-ghost" onclick="editAbnormal('${r['id']}')">✎</button>
+        <button class="btn btn-ghost" onclick="deleteAbnormal('${r['id']}')">✕</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+async function refreshAbnormal(){
+  try{
+    setSyncState('abnormal', 'loading');
+    const rows = await apiGet('abnormal');
+    abnormalRows = rows;
+    renderAbnormal(rows);
+    setSyncState('abnormal', 'synced');
+    document.getElementById('ab-print-meta').textContent = `列印時間：${new Date().toLocaleString('zh-TW')}　共 ${rows.length} 筆`;
+  }catch(err){
+    setSyncState('abnormal', 'error');
+  }
+}
+
+/* ---------------- 交接表 ---------------- */
+
+async function submitHandover(){
+  const data = {
+    date: document.getElementById('ho-date').value,
+    store: document.getElementById('ho-store').value.trim(),
+    content: document.getElementById('ho-content').value.trim()
+  };
+  if (!data.date || !data.store){
+    showToast('請填寫日期與店家');
+    return;
+  }
+  try{
+    setSyncState('handover', 'loading');
+    if (editingHandoverId){
+      await apiPost({ action: 'update', type: 'handover', id: editingHandoverId, data });
+      showToast('已更新交接紀錄');
+      editingHandoverId = null;
+      setFormMode('handover', false);
+    } else {
+      await apiPost({ action: 'add', type: 'handover', data });
+      showToast('已新增交接紀錄');
+    }
+    document.getElementById('form-handover').reset();
+    document.getElementById('ho-date').valueAsDate = new Date();
+    await refreshHandover();
+  }catch(err){
+    setSyncState('handover', 'error');
+    showToast('儲存失敗：' + err.message);
+  }
+}
+
+function editHandover(id){
+  const row = handoverRows.find(r => r['id'] === id);
+  if (!row) return;
+  editingHandoverId = id;
+  document.getElementById('ho-date').value = row['日期'] || '';
+  document.getElementById('ho-store').value = row['客戶名稱+車號'] || '';
+  document.getElementById('ho-content').value = row['事項'] || '';
+  setFormMode('handover', true);
+  switchTab('handover');
+  document.getElementById('form-handover').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function deleteHandover(id){
+  if (!confirm('確定要刪除這筆交接紀錄嗎？')) return;
+  try{
+    setSyncState('handover', 'loading');
+    await apiPost({ action: 'delete', type: 'handover', id });
+    await refreshHandover();
+  }catch(err){
+    setSyncState('handover', 'error');
+    showToast('刪除失敗：' + err.message);
+  }
+}
+
+function renderHandover(rows){
+  const tbody = document.getElementById('ho-tbody');
+  if (!rows || rows.length === 0){
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="4"><span class="empty-icon">📋</span>尚無資料</td></tr>';
+    return;
+  }
+  tbody.innerHTML = rows.map(r => `
+    <tr>
+      <td class="mono-cell">${escapeHtml(r['日期'])}</td>
+      <td>${escapeHtml(r['客戶名稱+車號'])}</td>
+      <td>${escapeHtml(r['事項'])}</td>
+      <td class="col-del">
+        <button class="btn btn-ghost" onclick="editHandover('${r['id']}')">✎</button>
+        <button class="btn btn-ghost" onclick="deleteHandover('${r['id']}')">✕</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+async function refreshHandover(){
+  try{
+    setSyncState('handover', 'loading');
+    const rows = await apiGet('handover');
+    handoverRows = rows;
+    renderHandover(rows);
+    setSyncState('handover', 'synced');
+    document.getElementById('ho-print-meta').textContent = `列印時間：${new Date().toLocaleString('zh-TW')}　共 ${rows.length} 筆`;
+  }catch(err){
+    setSyncState('handover', 'error');
+  }
+}
+
+/* ---------------- 共用 ---------------- */
+
+async function clearAll(type){
+  var label = type === 'abnormal' ? '異常表' : '交接表';
+  if (!confirm(`確定要刪除「${label}」的所有資料嗎？此動作無法復原。`)) return;
+  if (!confirm(`再次確認：這會清空全部 ${label} 資料，確定要繼續嗎？`)) return;
+  try{
+    setSyncState(type, 'loading');
+    await apiPost({ action: 'clearAll', type: type });
+    showToast(`已刪除 ${label} 全部資料`);
+    if (type === 'abnormal') await refreshAbnormal(); else await refreshHandover();
+  }catch(err){
+    setSyncState(type, 'error');
+    showToast('刪除失敗：' + err.message);
+  }
+}
+
+function chipClass(status){
+  switch (status){
+    case '換貨': return 'exchange';
+    case '反應': return 'reaction';
+    case '補貨': return 'restock';
+    default: return 'return'; // 退貨
+  }
+}
+
+function escapeHtml(v){
+  if (v === undefined || v === null) return '';
+  return String(v)
+    .replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')
+    .replaceAll('"','&quot;').replaceAll("'",'&#39;');
+}
+
+function chunkArray(arr, size){
+  const chunks = [];
+  for (let i = 0; i < arr.length; i += size) chunks.push(arr.slice(i, i + size));
+  return chunks;
+}
+
+const AB_LEGEND_TEXT = '異常類別：A品質、B送貨延遲(送錯貨)、C銷貨單 手抄單錯誤、D漏單、E未依客戶需求供貨、F銷貨單未送達(未簽名)、G交接事項、H收回退貨、I出貨數量異常';
+
+function preparePrintAbnormal(){
+  const container = document.getElementById('ab-print-only');
+  const chunks = abnormalRows && abnormalRows.length ? chunkArray(abnormalRows, 16) : [[]];
+
+  const colgroup = `
+    <colgroup>
+      <col class="c1"><col class="c2"><col class="c3"><col class="c4">
+      <col class="c5"><col class="c6"><col class="c7"><col class="c8">
+    </colgroup>`;
+
+  container.innerHTML = chunks.map(chunk => `
+    <div class="ab-print-page">
+      <table class="ab-print-table">
+        ${colgroup}
+        <thead>
+          <tr class="ab-title-row"><th colspan="8">忠欣蔬果有限公司</th></tr>
+          <tr class="ab-title-row"><th colspan="8">每日交接事件一覽表</th></tr>
+          <tr class="ab-legend-row"><th colspan="8">${AB_LEGEND_TEXT}</th></tr>
+          <tr class="ab-header-row">
+            <th>日期</th><th>車號</th><th>客戶名稱</th><th>異常類別</th><th>狀況說明</th><th>處理方式</th><th>責任歸屬</th><th>補充說明</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${chunk.length ? chunk.map(r => `
+            <tr>
+              <td>${escapeHtml(r['日期'])}</td>
+              <td>${escapeHtml(r['車號'])}</td>
+              <td>${escapeHtml(r['店家'])}</td>
+              <td>${escapeHtml(r['異常類別'])}</td>
+              <td>${escapeHtml(r['狀況說明'])}</td>
+              <td>${escapeHtml(r['處理方式'])}</td>
+              <td>${escapeHtml(r['責任歸屬'])}</td>
+              <td>${escapeHtml(r['補充說明'])}</td>
+            </tr>
+          `).join('') : '<tr><td colspan="8" style="text-align:center;padding:20px;">尚無資料</td></tr>'}
+        </tbody>
+      </table>
+    </div>
+  `).join('');
+}
+
+function setPageOrientation(orientation){
+  let styleTag = document.getElementById('dynamic-page-style');
+  if (!styleTag){
+    styleTag = document.createElement('style');
+    styleTag.id = 'dynamic-page-style';
+    document.head.appendChild(styleTag);
+  }
+  styleTag.textContent = orientation === 'portrait'
+    ? `@page { size: A4 portrait; margin: 18mm 15mm; }`
+    : `@page { size: A4 landscape; margin: 18mm 10mm; }`;
+}
+
+function preparePrintHandover(){
+  const now = new Date();
+  document.getElementById('ho-print-title-cell').textContent = `${now.getMonth() + 1}月${now.getDate()}日交接事項`;
+  const tbody = document.getElementById('ho-print-tbody');
+  if (!handoverRows || handoverRows.length === 0){
+    tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; padding:20px;">尚無資料</td></tr>';
+    return;
+  }
+  tbody.innerHTML = handoverRows.map(r => `
+    <tr>
+      <td>${escapeHtml(r['客戶名稱+車號'])}</td>
+      <td>${escapeHtml(r['事項'])}</td>
+    </tr>
+  `).join('');
+}
+
+function printPanel(type){
+  if (type === 'handover'){
+    setPageOrientation('portrait');
+    preparePrintHandover();
+  } else {
+    setPageOrientation('landscape');
+    preparePrintAbnormal();
+  }
+  switchTab(type);
+  setTimeout(() => window.print(), 50);
 }
 
 /* ---------------- 匯出 Excel（格式對照上傳的範本檔案） ---------------- */
@@ -182,5 +1258,21 @@ async function exportHandoverExcel(){
 }
 
 async function refreshAll(){
-await Promise.all([refreshAbnormal(), refreshHandover()]);
+  await Promise.all([refreshAbnormal(), refreshHandover()]);
 }
+
+function startPolling(){
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(refreshAll, POLL_INTERVAL);
+}
+
+// 預設今天日期
+document.getElementById('ab-date').valueAsDate = new Date();
+document.getElementById('ho-date').valueAsDate = new Date();
+
+refreshAll();
+startPolling();
+</script>
+
+</body>
+</html>
