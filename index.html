@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
@@ -463,6 +462,38 @@
 
   .col-del{ width: 68px; text-align: right; white-space: nowrap; }
 
+  .inline-edit-row td{ padding: 0; border-bottom: 1px solid var(--border); }
+  .inline-edit-form{
+    background: var(--surface-2);
+    padding: 18px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 14px;
+    align-items: end;
+    border-top: 2px solid var(--accent, var(--handover));
+    border-bottom: 1px solid var(--border-strong);
+  }
+  .inline-edit-form .field.wide{ grid-column: 1 / -1; }
+  .inline-edit-form label{
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text-soft);
+    display: block;
+    margin-bottom: 6px;
+  }
+  .inline-edit-form input, .inline-edit-form select, .inline-edit-form textarea{
+    width: 100%;
+    border: 1px solid var(--border-strong);
+    border-radius: 7px;
+    padding: 9px 11px;
+    font-size: 14.5px;
+    font-family: inherit;
+    background: var(--surface);
+    color: var(--text);
+    box-sizing: border-box;
+  }
+  .inline-edit-form textarea{ resize: vertical; min-height: 40px; }
+
   .toast{
     position: fixed;
     bottom: 22px;
@@ -617,8 +648,7 @@
           <textarea id="ab-note" placeholder="其他補充說明（選填）"></textarea>
         </div>
         <div class="field">
-          <button class="btn btn-primary" id="ab-submit-btn" onclick="submitAbnormal()">新增紀錄</button>
-          <button class="btn btn-secondary" id="ab-cancel-btn" style="display:none;" onclick="cancelEdit('abnormal')">取消編輯</button>
+          <button class="btn btn-primary" onclick="submitAbnormal()">新增紀錄</button>
         </div>
       </form>
     </div>
@@ -669,8 +699,7 @@
           <textarea id="ho-content" placeholder="請描述交接事項"></textarea>
         </div>
         <div class="field">
-          <button class="btn btn-primary" id="ho-submit-btn" onclick="submitHandover()">新增紀錄</button>
-          <button class="btn btn-secondary" id="ho-cancel-btn" style="display:none;" onclick="cancelEdit('handover')">取消編輯</button>
+          <button class="btn btn-primary" onclick="submitHandover()">新增紀錄</button>
         </div>
       </form>
     </div>
@@ -725,28 +754,11 @@ const GAS_URL = "https://script.google.com/macros/s/AKfycbwi2fQVqRyMcMBbuM3801wy
 const POLL_INTERVAL = 8000; // 多裝置同步輪詢間隔（毫秒）
 let pollTimer = null;
 
-let editingAbnormalId = null;
-let editingHandoverId = null;
 let abnormalRows = [];
 let handoverRows = [];
 
-function setFormMode(type, editing){
-  const prefix = type === 'abnormal' ? 'ab' : 'ho';
-  document.getElementById(prefix + '-submit-btn').textContent = editing ? '更新紀錄' : '新增紀錄';
-  document.getElementById(prefix + '-cancel-btn').style.display = editing ? 'inline-block' : 'none';
-}
-
-function cancelEdit(type){
-  if (type === 'abnormal'){
-    editingAbnormalId = null;
-    document.getElementById('form-abnormal').reset();
-    document.getElementById('ab-date').valueAsDate = new Date();
-  } else {
-    editingHandoverId = null;
-    document.getElementById('form-handover').reset();
-    document.getElementById('ho-date').valueAsDate = new Date();
-  }
-  setFormMode(type, false);
+function closeInlineEdits(){
+  document.querySelectorAll('.inline-edit-row').forEach(el => el.remove());
 }
 
 function switchTab(type){
@@ -809,15 +821,8 @@ async function submitAbnormal(){
   }
   try{
     setSyncState('abnormal', 'loading');
-    if (editingAbnormalId){
-      await apiPost({ action: 'update', type: 'abnormal', id: editingAbnormalId, data });
-      showToast('已更新異常紀錄');
-      editingAbnormalId = null;
-      setFormMode('abnormal', false);
-    } else {
-      await apiPost({ action: 'add', type: 'abnormal', data });
-      showToast('已新增異常紀錄');
-    }
+    await apiPost({ action: 'add', type: 'abnormal', data });
+    showToast('已新增異常紀錄');
     document.getElementById('form-abnormal').reset();
     document.getElementById('ab-date').valueAsDate = new Date();
     await refreshAbnormal();
@@ -827,21 +832,93 @@ async function submitAbnormal(){
   }
 }
 
+const EXCHANGE_TYPES = ['退貨', '換貨', '反應', '補貨'];
+const AB_CATEGORIES = ['A 品質', 'B 送貨延遲(送錯貨)', 'C 銷貨單 手抄單錯誤', 'D 漏單', 'E 未依客戶需求供貨', 'F 銷貨單未送達(未簽名)', 'G 交接事項', 'H 收回退貨', 'I 出貨數量異常'];
+
+function buildOptions(values, selected){
+  return values.map(v => `<option value="${escapeHtml(v)}" ${v === selected ? 'selected' : ''}>${escapeHtml(v)}</option>`).join('');
+}
+
 function editAbnormal(id){
+  closeInlineEdits();
   const row = abnormalRows.find(r => r['id'] === id);
   if (!row) return;
-  editingAbnormalId = id;
-  document.getElementById('ab-date').value = row['日期'] || '';
-  document.getElementById('ab-carNo').value = row['車號'] || '';
-  document.getElementById('ab-store').value = row['店家'] || '';
-  document.getElementById('ab-reason').value = row['狀況說明'] || '';
-  document.getElementById('ab-exchangeType').value = row['處理方式'] || '退貨';
-  document.getElementById('ab-category').value = row['異常類別'] || 'A 品質';
-  document.getElementById('ab-responsibility').value = row['責任歸屬'] || '';
-  document.getElementById('ab-note').value = row['補充說明'] || '';
-  setFormMode('abnormal', true);
-  switchTab('abnormal');
-  document.getElementById('form-abnormal').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const tr = document.querySelector(`tr[data-ab-id="${id}"]`);
+  if (!tr) return;
+
+  const editTr = document.createElement('tr');
+  editTr.className = 'inline-edit-row';
+  editTr.innerHTML = `
+    <td colspan="9">
+      <div class="inline-edit-form">
+        <div class="field">
+          <label>日期</label>
+          <input type="date" id="edit-ab-date-${id}" value="${row['日期'] || ''}">
+        </div>
+        <div class="field">
+          <label>車號</label>
+          <input type="text" id="edit-ab-carNo-${id}" value="${escapeHtml(row['車號'] || '')}">
+        </div>
+        <div class="field">
+          <label>店家</label>
+          <input type="text" id="edit-ab-store-${id}" value="${escapeHtml(row['店家'] || '')}">
+        </div>
+        <div class="field">
+          <label>處理方式</label>
+          <select id="edit-ab-exchangeType-${id}">${buildOptions(EXCHANGE_TYPES, row['處理方式'])}</select>
+        </div>
+        <div class="field">
+          <label>異常類別</label>
+          <select id="edit-ab-category-${id}">${buildOptions(AB_CATEGORIES, row['異常類別'])}</select>
+        </div>
+        <div class="field">
+          <label>責任歸屬</label>
+          <input type="text" id="edit-ab-responsibility-${id}" value="${escapeHtml(row['責任歸屬'] || '')}">
+        </div>
+        <div class="field wide">
+          <label>狀況說明</label>
+          <textarea id="edit-ab-reason-${id}">${escapeHtml(row['狀況說明'] || '')}</textarea>
+        </div>
+        <div class="field wide">
+          <label>補充說明</label>
+          <textarea id="edit-ab-note-${id}">${escapeHtml(row['補充說明'] || '')}</textarea>
+        </div>
+        <div class="field">
+          <button class="btn btn-primary" onclick="saveInlineAbnormal('${id}')">儲存</button>
+          <button class="btn btn-secondary" onclick="closeInlineEdits()">取消</button>
+        </div>
+      </div>
+    </td>
+  `;
+  tr.after(editTr);
+  editTr.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+async function saveInlineAbnormal(id){
+  const data = {
+    date: document.getElementById(`edit-ab-date-${id}`).value,
+    carNo: document.getElementById(`edit-ab-carNo-${id}`).value.trim(),
+    store: document.getElementById(`edit-ab-store-${id}`).value.trim(),
+    reason: document.getElementById(`edit-ab-reason-${id}`).value.trim(),
+    exchangeType: document.getElementById(`edit-ab-exchangeType-${id}`).value,
+    category: document.getElementById(`edit-ab-category-${id}`).value,
+    responsibility: document.getElementById(`edit-ab-responsibility-${id}`).value.trim(),
+    note: document.getElementById(`edit-ab-note-${id}`).value.trim()
+  };
+  if (!data.date || !data.store){
+    showToast('請填寫日期與店家');
+    return;
+  }
+  try{
+    setSyncState('abnormal', 'loading');
+    await apiPost({ action: 'update', type: 'abnormal', id, data });
+    showToast('已更新異常紀錄');
+    closeInlineEdits();
+    await refreshAbnormal();
+  }catch(err){
+    setSyncState('abnormal', 'error');
+    showToast('更新失敗：' + err.message);
+  }
 }
 
 async function deleteAbnormal(id){
@@ -863,7 +940,7 @@ function renderAbnormal(rows){
     return;
   }
   tbody.innerHTML = rows.map(r => `
-    <tr>
+    <tr data-ab-id="${r['id']}">
       <td class="mono-cell">${escapeHtml(r['日期'])}</td>
       <td>${escapeHtml(r['車號'])}</td>
       <td>${escapeHtml(r['店家'])}</td>
@@ -907,15 +984,8 @@ async function submitHandover(){
   }
   try{
     setSyncState('handover', 'loading');
-    if (editingHandoverId){
-      await apiPost({ action: 'update', type: 'handover', id: editingHandoverId, data });
-      showToast('已更新交接紀錄');
-      editingHandoverId = null;
-      setFormMode('handover', false);
-    } else {
-      await apiPost({ action: 'add', type: 'handover', data });
-      showToast('已新增交接紀錄');
-    }
+    await apiPost({ action: 'add', type: 'handover', data });
+    showToast('已新增交接紀錄');
     document.getElementById('form-handover').reset();
     document.getElementById('ho-date').valueAsDate = new Date();
     await refreshHandover();
@@ -926,15 +996,60 @@ async function submitHandover(){
 }
 
 function editHandover(id){
+  closeInlineEdits();
   const row = handoverRows.find(r => r['id'] === id);
   if (!row) return;
-  editingHandoverId = id;
-  document.getElementById('ho-date').value = row['日期'] || '';
-  document.getElementById('ho-store').value = row['客戶名稱+車號'] || '';
-  document.getElementById('ho-content').value = row['事項'] || '';
-  setFormMode('handover', true);
-  switchTab('handover');
-  document.getElementById('form-handover').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const tr = document.querySelector(`tr[data-ho-id="${id}"]`);
+  if (!tr) return;
+
+  const editTr = document.createElement('tr');
+  editTr.className = 'inline-edit-row';
+  editTr.innerHTML = `
+    <td colspan="4">
+      <div class="inline-edit-form">
+        <div class="field">
+          <label>日期</label>
+          <input type="date" id="edit-ho-date-${id}" value="${row['日期'] || ''}">
+        </div>
+        <div class="field">
+          <label>客戶名稱+車號</label>
+          <input type="text" id="edit-ho-store-${id}" value="${escapeHtml(row['客戶名稱+車號'] || '')}">
+        </div>
+        <div class="field wide">
+          <label>事項</label>
+          <textarea id="edit-ho-content-${id}">${escapeHtml(row['事項'] || '')}</textarea>
+        </div>
+        <div class="field">
+          <button class="btn btn-primary" onclick="saveInlineHandover('${id}')">儲存</button>
+          <button class="btn btn-secondary" onclick="closeInlineEdits()">取消</button>
+        </div>
+      </div>
+    </td>
+  `;
+  tr.after(editTr);
+  editTr.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+async function saveInlineHandover(id){
+  const data = {
+    date: document.getElementById(`edit-ho-date-${id}`).value,
+    store: document.getElementById(`edit-ho-store-${id}`).value.trim(),
+    content: document.getElementById(`edit-ho-content-${id}`).value.trim()
+  };
+  if (!data.date || !data.store){
+    showToast('請填寫日期與店家');
+    return;
+  }
+  try{
+    setSyncState('handover', 'loading');
+    await apiPost({ action: 'update', type: 'handover', id, data });
+    showToast('已更新交接紀錄');
+    closeInlineEdits();
+    await refreshHandover();
+  }catch(err){
+    setSyncState('handover', 'error');
+    showToast('更新失敗：' + err.message);
+  }
 }
 
 async function deleteHandover(id){
@@ -956,7 +1071,7 @@ function renderHandover(rows){
     return;
   }
   tbody.innerHTML = rows.map(r => `
-    <tr>
+    <tr data-ho-id="${r['id']}">
       <td class="mono-cell">${escapeHtml(r['日期'])}</td>
       <td>${escapeHtml(r['客戶名稱+車號'])}</td>
       <td>${escapeHtml(r['事項'])}</td>
