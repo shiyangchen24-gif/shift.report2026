@@ -639,6 +639,30 @@
   .preview-table [contenteditable="true"]:hover{ background: #FFF9E0; }
   .preview-table [contenteditable="true"]:focus{ background: #FFF3C0; }
 
+  .preview-table th, .preview-table td{ position: relative; }
+
+  .col-resize-handle{
+    position: absolute;
+    top: 0; right: -3px;
+    width: 6px; height: 100%;
+    cursor: col-resize;
+    z-index: 5;
+  }
+  .col-resize-handle:hover, .col-resize-handle:active{ background: rgba(45, 121, 228, 0.35); }
+
+  .row-resize-handle{
+    position: absolute;
+    left: 0; bottom: -3px;
+    width: 100%; height: 6px;
+    cursor: row-resize;
+    z-index: 5;
+  }
+  .row-resize-handle:hover, .row-resize-handle:active{ background: rgba(45, 121, 228, 0.35); }
+
+  @media print{
+    .col-resize-handle, .row-resize-handle{ display: none !important; }
+  }
+
   /* ---------- Print ---------- */
   @media print{
     @page{ size: A4 landscape; margin: 18mm 10mm; }
@@ -1403,17 +1427,31 @@ const AB_LEGEND_TEXT = '異常類別：A品質、B送貨延遲(送錯貨)、C銷
 
 let currentPreviewType = null;
 
+function formatDateMD(dateStr){
+  if (!dateStr) return '';
+  const m = String(dateStr).match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (m) return `${parseInt(m[2], 10)}月${parseInt(m[3], 10)}日`;
+  const d = new Date(dateStr);
+  if (!isNaN(d.getTime())) return `${d.getMonth() + 1}月${d.getDate()}日`;
+  return dateStr;
+}
+
 function buildAbnormalPreviewPages(){
   const container = document.getElementById('preview-body');
   const chunks = abnormalRows && abnormalRows.length ? chunkArray(abnormalRows, 16) : [[]];
 
   const colgroup = `
     <colgroup>
-      <col class="c1"><col class="c2"><col class="c3"><col class="c4">
-      <col class="c5"><col class="c6"><col class="c7"><col class="c8">
+      <col class="c1" style="width:7.5%"><col class="c2" style="width:7%">
+      <col class="c3" style="width:13.9%"><col class="c4" style="width:7.9%">
+      <col class="c5" style="width:37.2%"><col class="c6" style="width:10.3%">
+      <col class="c7" style="width:10.3%"><col class="c8" style="width:5.9%">
     </colgroup>`;
 
-  container.innerHTML = chunks.map(chunk => `
+  container.innerHTML = chunks.map(chunk => {
+    const padded = chunk.slice();
+    while (padded.length < 16) padded.push(null); // 不足 16 筆時補空白列
+    return `
     <div class="preview-page ab-print-page">
       <table class="ab-print-table preview-table">
         ${colgroup}
@@ -1426,9 +1464,9 @@ function buildAbnormalPreviewPages(){
           </tr>
         </thead>
         <tbody>
-          ${chunk.length ? chunk.map(r => `
+          ${padded.map(r => r ? `
             <tr>
-              <td contenteditable="true">${escapeHtml(r['日期'])}</td>
+              <td contenteditable="true">${escapeHtml(formatDateMD(r['日期']))}</td>
               <td contenteditable="true">${escapeHtml(r['車號'])}</td>
               <td contenteditable="true">${escapeHtml(r['店家'])}</td>
               <td contenteditable="true">${escapeHtml((r['異常類別'] || '').split(' ')[0])}</td>
@@ -1437,11 +1475,22 @@ function buildAbnormalPreviewPages(){
               <td contenteditable="true">${escapeHtml(r['責任歸屬'])}</td>
               <td contenteditable="true">${escapeHtml(r['補充說明'])}</td>
             </tr>
-          `).join('') : '<tr><td colspan="8" style="text-align:center;padding:20px;">尚無資料</td></tr>'}
+          ` : `
+            <tr>
+              <td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true"></td>
+              <td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true"></td>
+            </tr>
+          `).join('')}
         </tbody>
       </table>
     </div>
-  `).join('');
+  `;
+  }).join('');
+
+  container.querySelectorAll('.ab-print-table').forEach(table => {
+    makeColumnsResizable(table);
+    makeRowsResizable(table);
+  });
 }
 
 function buildHandoverPreviewPage(){
@@ -1453,6 +1502,7 @@ function buildHandoverPreviewPage(){
   container.innerHTML = `
     <div class="preview-page">
       <table class="ho-print-table preview-table">
+        <colgroup><col class="hc1" style="width:15%"><col class="hc2" style="width:85%"></colgroup>
         <thead>
           <tr><th colspan="2" contenteditable="true">${title}</th></tr>
           <tr><th>客戶名稱+車號</th><th>事項</th></tr>
@@ -1468,6 +1518,75 @@ function buildHandoverPreviewPage(){
       </table>
     </div>
   `;
+
+  container.querySelectorAll('.ho-print-table').forEach(table => {
+    makeColumnsResizable(table);
+    makeRowsResizable(table);
+  });
+}
+
+/* ---------------- 列印預覽：欄寬 / 列高可拖曳調整 ---------------- */
+
+function makeColumnsResizable(table){
+  const cols = table.querySelectorAll('colgroup col');
+  const headerRow = table.querySelector('thead tr:last-child');
+  if (!cols.length || !headerRow) return;
+  const ths = headerRow.querySelectorAll('th');
+  const tableWidth = table.getBoundingClientRect().width || table.offsetWidth || 800;
+
+  cols.forEach(col => {
+    const pct = parseFloat(col.style.width) || (100 / cols.length);
+    col.style.width = Math.round(tableWidth * pct / 100) + 'px';
+  });
+
+  ths.forEach((th, i) => {
+    if (i >= cols.length) return;
+    th.classList.add('resizable-th');
+    const handle = document.createElement('span');
+    handle.className = 'col-resize-handle';
+    th.appendChild(handle);
+    handle.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      const startX = e.clientX;
+      const startWidth = parseFloat(cols[i].style.width) || th.getBoundingClientRect().width;
+      function onMove(ev){
+        const newWidth = Math.max(24, startWidth + (ev.clientX - startX));
+        cols[i].style.width = newWidth + 'px';
+      }
+      function onUp(){
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+      }
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+  });
+}
+
+function makeRowsResizable(table){
+  table.querySelectorAll('tbody tr').forEach(tr => {
+    const lastCell = tr.lastElementChild;
+    if (!lastCell) return;
+    lastCell.classList.add('resizable-td');
+    const handle = document.createElement('span');
+    handle.className = 'row-resize-handle';
+    lastCell.appendChild(handle);
+    handle.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      const startY = e.clientY;
+      const startHeight = tr.getBoundingClientRect().height;
+      function onMove(ev){
+        const newHeight = Math.max(20, startHeight + (ev.clientY - startY));
+        tr.style.height = newHeight + 'px';
+      }
+      function onUp(){
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+      }
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+  });
 }
 
 function setPageOrientation(orientation){
