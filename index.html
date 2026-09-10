@@ -599,6 +599,33 @@
     flex-shrink: 0;
   }
 
+  .preview-toolbar{
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    padding: 10px 22px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    background: var(--surface);
+  }
+  .preview-toolbar label{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-soft);
+  }
+  .preview-toolbar select{
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    padding: 6px 9px;
+    font-size: 13.5px;
+    font-family: inherit;
+    background: var(--surface);
+    color: var(--text);
+  }
+
   .preview-body{
     overflow: auto;
     padding: 24px;
@@ -716,7 +743,8 @@
       display: block !important;
     }
     body.previewing .preview-header,
-    body.previewing .preview-hint{ display: none !important; }
+    body.previewing .preview-hint,
+    body.previewing .preview-toolbar{ display: none !important; }
     body.previewing .preview-body{
       overflow: visible !important;
       padding: 0 !important;
@@ -948,6 +976,29 @@
       </div>
     </div>
     <div class="preview-hint">內容可直接點擊編輯，確認無誤後再按「列印」（編輯不會存回資料庫，只影響這次列印結果）</div>
+    <div class="preview-toolbar">
+      <label>文字大小
+        <select id="preview-font-size" onchange="applyPreviewFontSize(this.value)">
+          <option value="9">9pt</option>
+          <option value="10">10pt</option>
+          <option value="11">11pt</option>
+          <option value="12">12pt</option>
+          <option value="14">14pt</option>
+          <option value="16">16pt</option>
+          <option value="18">18pt</option>
+          <option value="20">20pt</option>
+        </select>
+      </label>
+      <label>文字字型
+        <select id="preview-font-family" onchange="applyPreviewFontFamily(this.value)">
+          <option value="'Microsoft JhengHei','微軟正黑體',sans-serif">微軟正黑體</option>
+          <option value="'DFKai-SB','標楷體',serif">標楷體</option>
+          <option value="'PMingLiU','新細明體',serif">新細明體</option>
+          <option value="'PingFang TC','蘋方-繁',sans-serif">蘋方-繁</option>
+          <option value="Arial, sans-serif">Arial</option>
+        </select>
+      </label>
+    </div>
     <div class="preview-body" id="preview-body"></div>
   </div>
 </div>
@@ -1536,12 +1587,6 @@ function makeColumnsResizable(table){
   const headerRow = table.querySelector('thead tr:last-child');
   if (!cols.length || !headerRow) return;
   const ths = headerRow.querySelectorAll('th');
-  const tableWidth = table.getBoundingClientRect().width || table.offsetWidth || 800;
-
-  cols.forEach(col => {
-    const pct = parseFloat(col.style.width) || (100 / cols.length);
-    col.style.width = Math.round(tableWidth * pct / 100) + 'px';
-  });
 
   ths.forEach((th, i) => {
     if (i >= cols.length) return;
@@ -1552,10 +1597,12 @@ function makeColumnsResizable(table){
     handle.addEventListener('mousedown', (e) => {
       e.preventDefault();
       const startX = e.clientX;
-      const startWidth = parseFloat(cols[i].style.width) || th.getBoundingClientRect().width;
+      const tableWidth = table.getBoundingClientRect().width || 800;
+      const startPct = parseFloat(cols[i].style.width) || (100 / cols.length);
       function onMove(ev){
-        const newWidth = Math.max(24, startWidth + (ev.clientX - startX));
-        cols[i].style.width = newWidth + 'px';
+        const deltaPct = ((ev.clientX - startX) / tableWidth) * 100;
+        const newPct = Math.max(3, startPct + deltaPct);
+        cols[i].style.width = newPct.toFixed(2) + '%';
       }
       function onUp(){
         document.removeEventListener('mousemove', onMove);
@@ -1617,6 +1664,18 @@ function openHandoverPrintPreview(){
   document.getElementById('preview-title').textContent = '交接表列印預覽';
   buildHandoverPreviewPage();
   document.getElementById('print-preview-overlay').classList.add('show');
+}
+
+function applyPreviewFontSize(size){
+  document.querySelectorAll('#preview-body th, #preview-body td').forEach(el => {
+    el.style.fontSize = size + 'pt';
+  });
+}
+
+function applyPreviewFontFamily(fontFamily){
+  document.querySelectorAll('#preview-body table').forEach(t => {
+    t.style.fontFamily = fontFamily;
+  });
 }
 
 function closePrintPreview(){
