@@ -964,9 +964,9 @@ function setSyncState(type, state){
 const SUPABASE_URL = "https://xojtuhbnvryfoslqekjr.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhvanR1aGJudnJ5Zm9zbHFla2pyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkwNTE5NTksImV4cCI6MjEwNDYyNzk1OX0.qIPaq_a2DjHTI7LB4LTh4Yn0Yl_jPLLx-6OE4w-gLV8";
 
-let supabase = null;
+let sb = null;
 try{
-  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 }catch(err){
   console.error('Supabase 初始化失敗：', err);
 }
@@ -974,7 +974,7 @@ try{
 const TABLES = { abnormal: 'abnormal_reports', handover: 'handover_reports' };
 
 function requireSupabase(){
-  if (!supabase){
+  if (!sb){
     throw new Error('無法連線到資料庫，請檢查網路連線或重新整理頁面');
   }
 }
@@ -1032,7 +1032,7 @@ function appDataToDbRow(type, data){
 
 async function apiGet(type){
   requireSupabase();
-  const { data, error } = await supabase
+  const { data, error } = await sb
     .from(TABLES[type])
     .select('*')
     .order('created_at', { ascending: false });
@@ -1042,25 +1042,25 @@ async function apiGet(type){
 
 async function dbAdd(type, data){
   requireSupabase();
-  const { error } = await supabase.from(TABLES[type]).insert(appDataToDbRow(type, data));
+  const { error } = await sb.from(TABLES[type]).insert(appDataToDbRow(type, data));
   if (error) throw new Error(error.message);
 }
 
 async function dbUpdate(type, id, data){
   requireSupabase();
-  const { error } = await supabase.from(TABLES[type]).update(appDataToDbRow(type, data)).eq('id', id);
+  const { error } = await sb.from(TABLES[type]).update(appDataToDbRow(type, data)).eq('id', id);
   if (error) throw new Error(error.message);
 }
 
 async function dbDelete(type, id){
   requireSupabase();
-  const { error } = await supabase.from(TABLES[type]).delete().eq('id', id);
+  const { error } = await sb.from(TABLES[type]).delete().eq('id', id);
   if (error) throw new Error(error.message);
 }
 
 async function dbClearAll(type){
   requireSupabase();
-  const { error } = await supabase.from(TABLES[type]).delete().not('id', 'is', null);
+  const { error } = await sb.from(TABLES[type]).delete().not('id', 'is', null);
   if (error) throw new Error(error.message);
 }
 
