@@ -7,8 +7,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
     --bg: #F6F6F8;
@@ -927,25 +925,8 @@
 </div>
 
 <script>
-/* =========================================================
-   請將下面兩行換成你自己 Supabase 專案的網址與 anon public key
-   （Supabase 後台 > Project Settings > API）
-   ========================================================= */
-const SUPABASE_URL = "https://xojtuhbnvryfoslqekjr.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhvanR1aGJudnJ5Zm9zbHFla2pyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkwNTE5NTksImV4cCI6MjEwNDYyNzk1OX0.qIPaq_a2DjHTI7LB4LTh4Yn0Yl_jPLLx-6OE4w-gLV8";
-
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-const TABLES = { abnormal: 'abnormal_reports', handover: 'handover_reports' };
-
-const POLL_INTERVAL = 8000; // 多裝置同步輪詢間隔（毫秒）
-let pollTimer = null;
-
-let abnormalRows = [];
-let handoverRows = [];
-
-function closeInlineEdits(){
-  document.querySelectorAll('.inline-edit-row').forEach(el => el.remove());
-}
+/* 核心 UI 函式：不依賴任何外部函式庫，確保即使雲端連線失敗，
+   頁籤切換、提示訊息等基本畫面互動仍然正常運作 */
 
 function switchTab(type){
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.type === type));
@@ -959,6 +940,10 @@ function showToast(msg){
   setTimeout(() => t.classList.remove('show'), 2200);
 }
 
+function closeInlineEdits(){
+  document.querySelectorAll('.inline-edit-row').forEach(el => el.remove());
+}
+
 function setSyncState(type, state){
   // state: 'loading' | 'synced' | 'error'
   const dot = document.getElementById(type === 'abnormal' ? 'ab-sync-dot' : 'ho-sync-dot');
@@ -967,6 +952,38 @@ function setSyncState(type, state){
   dot.style.background = state === 'error' ? '#ef4444' : (state === 'loading' ? '' : '#22c55e');
   text.textContent = state === 'error' ? '同步失敗' : (state === 'loading' ? '同步中…' : '已同步');
 }
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+/* =========================================================
+   請將下面兩行換成你自己 Supabase 專案的網址與 anon public key
+   （Supabase 後台 > Project Settings > API）
+   ========================================================= */
+const SUPABASE_URL = "https://xojtuhbnvryfoslqekjr.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhvanR1aGJudnJ5Zm9zbHFla2pyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkwNTE5NTksImV4cCI6MjEwNDYyNzk1OX0.qIPaq_a2DjHTI7LB4LTh4Yn0Yl_jPLLx-6OE4w-gLV8";
+
+let supabase = null;
+try{
+  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+}catch(err){
+  console.error('Supabase 初始化失敗：', err);
+}
+
+const TABLES = { abnormal: 'abnormal_reports', handover: 'handover_reports' };
+
+function requireSupabase(){
+  if (!supabase){
+    throw new Error('無法連線到資料庫，請檢查網路連線或重新整理頁面');
+  }
+}
+
+const POLL_INTERVAL = 8000; // 多裝置同步輪詢間隔（毫秒）
+let pollTimer = null;
+
+let abnormalRows = [];
+let handoverRows = [];
 
 /* ---------------- Supabase 資料轉換（維持跟畫面一致的中文欄位鍵） ---------------- */
 
@@ -1014,6 +1031,7 @@ function appDataToDbRow(type, data){
 }
 
 async function apiGet(type){
+  requireSupabase();
   const { data, error } = await supabase
     .from(TABLES[type])
     .select('*')
@@ -1023,21 +1041,25 @@ async function apiGet(type){
 }
 
 async function dbAdd(type, data){
+  requireSupabase();
   const { error } = await supabase.from(TABLES[type]).insert(appDataToDbRow(type, data));
   if (error) throw new Error(error.message);
 }
 
 async function dbUpdate(type, id, data){
+  requireSupabase();
   const { error } = await supabase.from(TABLES[type]).update(appDataToDbRow(type, data)).eq('id', id);
   if (error) throw new Error(error.message);
 }
 
 async function dbDelete(type, id){
+  requireSupabase();
   const { error } = await supabase.from(TABLES[type]).delete().eq('id', id);
   if (error) throw new Error(error.message);
 }
 
 async function dbClearAll(type){
+  requireSupabase();
   const { error } = await supabase.from(TABLES[type]).delete().not('id', 'is', null);
   if (error) throw new Error(error.message);
 }
@@ -1484,162 +1506,6 @@ function doPrintPreview(){
   setPageOrientation('landscape');
   document.body.classList.add('previewing');
   setTimeout(() => window.print(), 50);
-}
-
-/* ---------------- 匯出 Excel（格式對照上傳的範本檔案） ---------------- */
-
-async function downloadWorkbook(workbook, filename){
-  const buffer = await workbook.xlsx.writeBuffer();
-  const blob = new Blob([buffer], { type: 'application/octet-stream' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
-
-const THIN_BORDER = { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } };
-
-async function exportAbnormalExcel(){
-  try{
-    const now = new Date();
-    const sheetTitle = `${now.getMonth() + 1}月${now.getDate()}日`;
-    const workbook = new ExcelJS.Workbook();
-    const ws = workbook.addWorksheet(sheetTitle, {
-      pageSetup: {
-        paperSize: 9,
-        orientation: 'landscape',
-        margins: { left: 0.25, right: 0.25, top: 0.75, bottom: 0.75, header: 0.3, footer: 0.3 }
-      }
-    });
-
-    ws.columns = [
-      { width: 10.5703125 }, { width: 6.42578125 }, { width: 22.140625 }, { width: 6.5703125 },
-      { width: 50.140625 }, { width: 11.0 }, { width: 11.28515625 }, { width: 35.42578125 }
-    ];
-
-    function styleTitleRow(rowNum, text, fontSize, height){
-      ws.mergeCells(rowNum, 1, rowNum, 8);
-      ws.getRow(rowNum).height = height;
-      for (let c = 1; c <= 8; c++){
-        const cell = ws.getCell(rowNum, c);
-        if (c === 1) cell.value = text;
-        cell.font = { name: '微軟正黑體', size: fontSize };
-        cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
-        cell.border = THIN_BORDER;
-      }
-    }
-
-    styleTitleRow(1, '忠欣蔬果有限公司', 14, 22.15);
-    styleTitleRow(2, '每日交接事件一覽表', 14, 22.15);
-    styleTitleRow(3, AB_LEGEND_TEXT, 11, 33);
-
-    const headers = ['日期', '車號', '客戶名稱', '異常類別', '狀況說明', '處理方式', '責任歸屬', '補充說明'];
-    ws.getRow(4).height = 33;
-    headers.forEach((h, i) => {
-      const cell = ws.getCell(4, i + 1);
-      cell.value = h;
-      cell.font = { name: '微軟正黑體', size: 12 };
-      cell.alignment = { horizontal: 'center', vertical: 'middle' };
-      cell.border = THIN_BORDER;
-    });
-
-    const rows = abnormalRows || [];
-    const totalRows = Math.max(16, Math.ceil(rows.length / 16) * 16);
-
-    for (let i = 0; i < totalRows; i++){
-      const rowNum = 5 + i;
-      const r = rows[i];
-      const values = r
-        ? [r['日期'], r['車號'], r['店家'], (r['異常類別'] || '').split(' ')[0], r['狀況說明'], r['處理方式'], r['責任歸屬'], r['補充說明']]
-        : ['', '', '', '', '', '', '', ''];
-      ws.getRow(rowNum).height = 24.75;
-      values.forEach((v, colIdx) => {
-        const cell = ws.getCell(rowNum, colIdx + 1);
-        cell.value = v || '';
-        cell.font = { name: '微軟正黑體', size: 11 };
-        cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
-        cell.border = THIN_BORDER;
-      });
-    }
-
-    ws.pageSetup.printArea = `A1:H${4 + totalRows}`;
-    ws.pageSetup.printTitlesRow = '1:4';
-
-    await downloadWorkbook(workbook, `異常表_${sheetTitle}.xlsx`);
-    showToast('已匯出異常表 Excel');
-  }catch(err){
-    showToast('匯出失敗：' + err.message);
-  }
-}
-
-async function exportHandoverExcel(){
-  try{
-    const now = new Date();
-    const title = `${now.getMonth() + 1}月${now.getDate()}日交接事項`;
-    const workbook = new ExcelJS.Workbook();
-    const ws = workbook.addWorksheet('交接表', {
-      pageSetup: {
-        paperSize: 9,
-        orientation: 'landscape',
-        margins: { left: 0.25, right: 0.25, top: 0.75, bottom: 0.75, header: 0.3, footer: 0.3 }
-      }
-    });
-
-    ws.columns = [{ width: 20.7109375 }, { width: 133.5703125 }];
-
-    ws.mergeCells('A1:B1');
-    ws.getRow(1).height = 30.75;
-    ['A', 'B'].forEach(col => {
-      const cell = ws.getCell(`${col}1`);
-      if (col === 'A') cell.value = title;
-      cell.font = { name: '微軟正黑體', size: 16, bold: true };
-      cell.alignment = { horizontal: 'center', vertical: 'middle' };
-      cell.border = THIN_BORDER;
-    });
-
-    const headers = ['客戶名稱+車號', '事項'];
-    ws.getRow(2).height = 27.75;
-    headers.forEach((h, i) => {
-      const cell = ws.getCell(2, i + 1);
-      cell.value = h;
-      cell.font = { name: '微軟正黑體', size: 14 };
-      cell.alignment = { horizontal: i === 0 ? 'center' : 'left', vertical: 'middle' };
-      cell.border = THIN_BORDER;
-    });
-
-    const rows = handoverRows || [];
-    const totalRows = Math.max(18, rows.length);
-
-    for (let i = 0; i < totalRows; i++){
-      const rowNum = 3 + i;
-      const r = rows[i];
-      ws.getRow(rowNum).height = 26.25;
-
-      const cell1 = ws.getCell(rowNum, 1);
-      cell1.value = r ? (r['客戶名稱+車號'] || '') : '';
-      cell1.font = { name: '微軟正黑體', size: 12 };
-      cell1.alignment = { horizontal: 'center', vertical: 'middle' };
-      cell1.border = THIN_BORDER;
-
-      const cell2 = ws.getCell(rowNum, 2);
-      cell2.value = r ? (r['事項'] || '') : '';
-      cell2.font = { name: '微軟正黑體', size: 12 };
-      cell2.alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
-      cell2.border = THIN_BORDER;
-    }
-
-    ws.pageSetup.printArea = `A1:B${2 + totalRows}`;
-    ws.pageSetup.printTitlesRow = '1:2';
-
-    await downloadWorkbook(workbook, `交接表_${title}.xlsx`);
-    showToast('已匯出交接表 Excel');
-  }catch(err){
-    showToast('匯出失敗：' + err.message);
-  }
 }
 
 async function refreshAll(){
