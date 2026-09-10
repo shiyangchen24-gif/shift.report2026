@@ -618,6 +618,7 @@
   .preview-table{
     width: 100%;
     border-collapse: collapse;
+    table-layout: fixed;
     font-family: "Microsoft JhengHei", "微軟正黑體", sans-serif;
   }
   .preview-table th, .preview-table td{
@@ -625,6 +626,9 @@
     padding: 7px 9px;
     font-size: 13.5px;
     text-align: left;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    white-space: normal;
   }
   .preview-table .ab-title-row th{ font-weight: 700; text-align: center; background: #FAFAF8; }
   .preview-table .ab-legend-row th{ font-size: 12px; text-align: center; color: #666; background: #FAFAF8; }
