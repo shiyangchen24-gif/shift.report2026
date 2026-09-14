@@ -1580,25 +1580,37 @@ function buildHandoverPreviewPage(){
   const title = `${now.getMonth() + 1}月${now.getDate()}日交接事項`;
   const rows = handoverRows || [];
 
-  container.innerHTML = `
-    <div class="preview-page">
+  const chunks = rows.length ? chunkArray(rows, 16) : [[]];
+
+  container.innerHTML = chunks.map((chunk, pageIndex) => {
+    const padded = chunk.slice();
+    while (padded.length < 16) padded.push(null); // 不足 16 筆時補空白列，保留格線
+
+    return `
+    <div class="preview-page ho-print-page">
       <table class="ho-print-table preview-table">
         <colgroup><col class="hc1" style="width:15%"><col class="hc2" style="width:85%"></colgroup>
         <thead>
-          <tr><th colspan="2" contenteditable="true">${title}</th></tr>
+          <tr><th colspan="2" contenteditable="true">${title}${chunks.length > 1 ? `（第 ${pageIndex + 1} 頁）` : ''}</th></tr>
           <tr><th>客戶名稱+車號</th><th>事項</th></tr>
         </thead>
         <tbody>
-          ${rows.length ? rows.map(r => `
+          ${padded.map(r => r ? `
             <tr>
               <td contenteditable="true">${escapeHtml(r['客戶名稱+車號'])}</td>
               <td contenteditable="true">${escapeHtml(r['事項'])}</td>
             </tr>
-          `).join('') : '<tr><td colspan="2" style="text-align:center;padding:20px;">尚無資料</td></tr>'}
+          ` : `
+            <tr>
+              <td contenteditable="true"></td>
+              <td contenteditable="true"></td>
+            </tr>
+          `).join('')}
         </tbody>
       </table>
     </div>
   `;
+  }).join('');
 
   container.querySelectorAll('.ho-print-table').forEach(table => {
     makeColumnsResizable(table);
